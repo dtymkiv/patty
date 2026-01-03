@@ -27,8 +27,8 @@
 </head>
 
 <body>
-    <div id="app" class="min-h-screen flex flex-col items-center p-1 sm:p-4">
-        <header class="w-full max-w-4xl flex justify-between items-center mb-2 sm:mb-8 mt-2 sm:mt-4 px-2">
+    <div id="app" class="min-h-screen flex flex-col items-center p-0 sm:p-4">
+        <header class="w-full max-w-4xl flex justify-between items-center mb-1 sm:mb-8 mt-1 sm:mt-4 px-1 sm:px-2">
             <h1
                 class="text-xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
                 Party Games</h1>
@@ -99,7 +99,7 @@
 
             <!-- View: Room (Game) -->
             <div v-else-if="view === 'room'" class="w-full max-w-6xl">
-                <div class="mb-4 flex justify-between items-center">
+                <div class="mb-1 sm:mb-4 flex justify-between items-center">
                     <button @click="leaveRoom" class="text-gray-400 hover:text-white">← Leave Room</button>
                     <div class="flex gap-4">
                         <div v-if="gameState === 'lobby'" class="flex gap-4">
@@ -146,8 +146,8 @@
 
                     <!-- Main: Game Area (Canvas/Config placeholder) -->
                     <div
-                        class="order-1 lg:order-none bg-gray-900 rounded-lg col-span-2 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 relative p-1 sm:p-8 lg:p-6">
-                        <div v-if="gameState === 'lobby'" class="w-full max-w-md">
+                        class="order-1 lg:order-none bg-gray-900 rounded-none sm:rounded-lg col-span-2 flex flex-col items-center justify-center border-0 sm:border-2 border-dashed border-gray-700 relative p-0 sm:p-8 lg:p-6">
+                        <div v-if="gameState === 'lobby'" class="w-full max-w-md p-4 sm:p-0">
                             <h3 class="text-xl font-bold mb-6 text-center text-purple-400">Game Configuration</h3>
 
                             <div class="space-y-6">
@@ -719,7 +719,7 @@
                     this.ctx = canvas.getContext('2d');
                     this.ctx.lineCap = 'round';
                     this.ctx.lineJoin = 'round';
-                    this.ctx.lineWidth = 5;
+                    this.ctx.lineWidth = 15;
 
                     // Redraw if we already have history (e.g. after resize)
                     if (this.strokeHistory.length > 0) {
