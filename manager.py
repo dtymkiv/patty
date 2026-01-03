@@ -62,7 +62,11 @@ class ConnectionManager:
                 "points_to_win": 50,
                 "base_points": 10,
                 "turn_order": "sequence",
-                "host_plays": True
+                "points_to_win": 50,
+                "base_points": 10,
+                "turn_order": "sequence",
+                "host_plays": True,
+                "word_language": "English"
             }
 
         self.rooms[room_id] = {
@@ -228,9 +232,9 @@ class ConnectionManager:
         from constants import WORD_SETS
         import random
         
-        all_words = []
-        for v in WORD_SETS.values():
-            all_words.extend(v)
+        language = room["config"].get("word_language", "English")
+        all_words = WORD_SETS.get(language, WORD_SETS["English"])
+        
         word = random.choice(all_words)
         gs["word"] = word
         gs["current_word_obfuscated"] =  "_ " * len(word)

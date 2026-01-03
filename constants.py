@@ -23,8 +23,42 @@ COLORS = [
 ]
 
 WORD_SETS = {
-    "Standard": ["Sun", "Moon", "Star", "Tree", "Flower", "House", "Car", "Boat", "Plane", "Train", "Bicycle", "Apple", "Banana", "Grapes", "Orange", "Cat", "Dog", "Fish", "Bird", "Snake", "Spider", "Butterfly", "Bee", "Ant", "Book", "Pen", "Pencil", "Chair", "Table", "Bed", "Sofa", "TV", "Computer", "Phone", "Clock", "Watch", "Glasses", "Hat", "Shirt", "Pants", "Shoe", "Sock", "Ball", "Bat", "Doll", "Robot", "Kite", "Balloon"],
-    "Animals": ["Lion", "Tiger", "Bear", "Elephant", "Giraffe", "Zebra", "Monkey", "Gorilla", "Kangaroo", "Koala", "Panda", "Wolf", "Fox", "Rabbit", "Mouse", "Rat", "Squirrel", "Chipmunk", "Beaver", "Otter", "Seal", "Walrus", "Whale", "Dolphin", "Shark", "Octopus", "Squid", "Crab", "Lobster", "Shrimp", "Snail", "Frog", "Toad", "Turtle", "Lizard", "Snake", "Crocodile", "Alligator", "Dinosaur", "Dragon", "Unicorn"],
-    "Food": ["Pizza", "Burger", "Fries", "Hotdog", "Sandwich", "Taco", "Burrito", "Sushi", "Noodle", "Pasta", "Rice", "Bread", "Cheese", "Egg", "Milk", "Coffee", "Tea", "Juice", "Water", "Soda", "Ice Cream", "Cake", "Cookie", "Donut", "Pie", "Chocolate", "Candy", "Fruit", "Vegetable", "Meat", "Fish", "Chicken"],
-    "Travel": ["Car", "Bus", "Train", "Subway", "Tram", "Truck", "Van", "Motorcycle", "Scooter", "Bicycle", "Boat", "Ship", "Ferry", "Yacht", "Submarine", "Plane", "Helicopter", "Rocket", "Spaceship", "UFO", "Balloon", "Parachute", "Hang Glider", "Ski", "Skate", "Snowboard", "Surfboard", "Passport", "Ticket", "Map", "Compass", "Suitcase", "Backpack", "Camera"],
+    "English": [
+        # Standard
+        "Sun", "Moon", "Star", "Tree", "Flower", "House", "Car", "Boat", "Plane", "Train", "Bicycle", "Apple", "Banana", "Grapes", "Orange", "Cat", "Dog", "Fish", "Bird", "Snake", "Spider", "Butterfly", "Bee", "Ant", "Book", "Pen", "Pencil", "Chair", "Table", "Bed", "Sofa", "TV", "Computer", "Phone", "Clock", "Watch", "Glasses", "Hat", "Shirt", "Pants", "Shoe", "Sock", "Ball", "Bat", "Doll", "Robot", "Kite", "Balloon",
+        # Animals
+        "Lion", "Tiger", "Bear", "Elephant", "Giraffe", "Zebra", "Monkey", "Gorilla", "Kangaroo", "Koala", "Panda", "Wolf", "Fox", "Rabbit", "Mouse", "Rat", "Squirrel", "Chipmunk", "Beaver", "Otter", "Seal", "Walrus", "Whale", "Dolphin", "Shark", "Octopus", "Squid", "Crab", "Lobster", "Shrimp", "Snail", "Frog", "Toad", "Turtle", "Lizard", "Crocodile", "Alligator", "Dinosaur", "Dragon", "Unicorn",
+        # Food
+        "Pizza", "Burger", "Fries", "Hotdog", "Sandwich", "Taco", "Burrito", "Sushi", "Noodle", "Pasta", "Rice", "Bread", "Cheese", "Egg", "Milk", "Coffee", "Tea", "Juice", "Water", "Soda", "Ice Cream", "Cake", "Cookie", "Donut", "Pie", "Chocolate", "Candy", "Fruit", "Vegetable", "Meat", "Chicken",
+        # Travel
+        "Bus", "Subway", "Tram", "Truck", "Van", "Motorcycle", "Scooter", "Ship", "Ferry", "Yacht", "Submarine", "Helicopter", "Rocket", "Spaceship", "UFO", "Parachute", "Hang Glider", "Ski", "Skate", "Snowboard", "Surfboard", "Passport", "Ticket", "Map", "Compass", "Suitcase", "Backpack", "Camera"
+    ],
+    "Ukrainian": [
+        "Сонце", "Місяць", "Зірка", "Дерево", "Квітка", "Хата", "Машина", "Човен", "Літак", "Поїзд", 
+        "Велосипед", "Яблуко", "Банан", "Виноград", "Апельсин", "Кіт", "Собака", "Риба", "Птах", "Змія", 
+        "Павук", "Метелик", "Бджола", "Мураха", "Книга", "Ручка", "Олівець", "Стілець", "Стіл", "Ліжко", 
+        "Диван", "Телевізор", "Комп'ютер", "Телефон", "Годинник", "Окуляри", "Капелюх", "Сорочка", "Штани", "Взуття", 
+        "Шкарпетка", "М'яч", "Лялька", "Робот", "Повітряний змій", "Кулька", "Лев", "Тигр", "Ведмідь", "Слон", 
+        "Жирафа", "Зебра", "Мавпа", "Кенгуру", "Панда", "Вовк", "Лисиця", "Заєць", "Миша", "Білка", 
+        "Бобер", "Тюлень", "Кит", "Дельфін", "Акула", "Восьминіг", "Краб", "Креветка", "Равлик", "Жаба", 
+        "Черепаха", "Ящірка", "Крокодил", "Динозавр", "Дракон", "Єдиноріг", "Піца", "Бургер", "Картопля", "Сендвіч", 
+        "Тако", "Суші", "Макарони", "Рис", "Хліб", "Сир", "Яйце", "Молоко", "Кава", "Чай", 
+        "Сік", "Вода", "Морозиво", "Торт", "Печиво", "Пончик", "Пиріг", "Шоколад", "Цукерка", "Фрукти", 
+        "Овочі", "М'ясо", "Курка", "Автобус", "Метро", "Трамвай", "Вантажівка", "Мотоцикл", "Самокат", "Корабель", 
+        "Яхта", "Підводний човен", "Вертольо", "Ракета", "НЛО", "Парашут", "Лижі", "Ковзани", "Сноуборд", "Паспорт", 
+        "Квиток", "Карта", "Компас", "Валіза", "Рюкзак", "Камера", "Гітара", "Барабан", "Скрипка", "Піаніно",
+        "Море", "Річка", "Озеро", "Гора", "Ліс", "Поле", "Дощ", "Сніг", "Вітер", "Хмара",
+        "Веселка", "Вогонь", "Дим", "Пісок", "Камінь", "Трава", "Лист", "Корінь", "Гриб", "Ягода",
+        "Вікно", "Двері", "Дах", "Стіна", "Підлога", "Сходи", "Паркан", "Ворота", "Міст", "Дорога",
+        "Світлофор", "Знак", "Ліхтар", "Лавка", "Фонтан", "Пам'ятник", "Церква", "Школа", "Лікарня", "Магазин",
+        "Ринок", "Кафе", "Кінотеатр", "Парк", "Стадіон", "Басейн", "Пляж", "Острів", "Печера", "Вулкан",
+        "Пустеля", "Джунглі", "Арктика", "Космос", "Планета", "Комета", "Астероїд", "Гроза", "Блискавка", "Грім",
+        "Туман", "Роса", "Іній", "Лід", "Бурулько", "Сніговик", "Сніжинка", "Ялинка", "Подарунок", "Свічка",
+        "Торт", "Куля", "Прапор", "Герб", "Гімн", "Вишиванка", "Вінок", "Калина", "Верба", "Лелека",
+        "Соловей", "Зозуля", "Дятел", "Сова", "Орел", "Сокіл", "Голуб", "Ворона", "Сорока", "Горобець",
+        "Синиця", "Ластівка", "Шпак", "Журавель", "Чапля", "Лебідь", "Качка", "Гуска", "Індик", "Півень",
+        "Курка", "Курча", "Корова", "Бик", "Кінь", "Лоша", "Вівця", "Баран", "Ягня", "Коза",
+        "Цап", "Свиня", "Порося", "Кріль", "Хом'як", "Папуга", "Рибка", "Черепаха", "Їжак", "Кріт",
+        "Кажан", "Лось", "Олень", "Косуля", "Кабан", "Борсук", "Єнот", "Рись", "Пума", "Гепард"
+    ]
 }

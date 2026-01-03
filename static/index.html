@@ -28,10 +28,11 @@
 
 <body>
     <div id="app" class="min-h-screen flex flex-col items-center p-1 sm:p-4">
-        <header class="w-full max-w-4xl flex justify-between items-center mb-8 mt-4">
-            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+        <header class="w-full max-w-4xl flex justify-between items-center mb-2 sm:mb-8 mt-2 sm:mt-4 px-2">
+            <h1
+                class="text-xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
                 Party Games</h1>
-            <div v-if="nickname" class="text-gray-300">
+            <div v-if="nickname" class="text-xs sm:text-base text-gray-300">
                 Playing as: <span class="font-bold text-white">{{ nickname }}</span>
             </div>
         </header>
@@ -118,9 +119,10 @@
                         </div>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 sm:gap-4 lg:h-[600px]">
+                <div class="flex flex-col lg:grid lg:grid-cols-4 gap-2 sm:gap-4 lg:h-[600px]">
                     <!-- Sidebar: Players -->
-                    <div class="bg-gray-800 p-4 rounded-lg col-span-1 overflow-y-auto">
+                    <div
+                        class="order-2 lg:order-none bg-gray-800 p-2 sm:p-4 rounded-lg col-span-1 overflow-y-auto max-h-[200px] lg:max-h-none">
                         <h3 class="font-bold mb-2 text-gray-400 uppercase text-xs">Players ({{ players.length }})</h3>
                         <ul class="space-y-2">
                             <li v-for="p in players" :key="p.nickname"
@@ -144,7 +146,7 @@
 
                     <!-- Main: Game Area (Canvas/Config placeholder) -->
                     <div
-                        class="bg-gray-900 rounded-lg col-span-2 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 relative p-8">
+                        class="order-1 lg:order-none bg-gray-900 rounded-lg col-span-2 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 relative p-1 sm:p-8 lg:p-6">
                         <div v-if="gameState === 'lobby'" class="w-full max-w-md">
                             <h3 class="text-xl font-bold mb-6 text-center text-purple-400">Game Configuration</h3>
 
@@ -201,6 +203,17 @@
                                             Winner First
                                         </button>
                                     </div>
+                                </div>
+
+                                <!-- Word Language -->
+                                <div>
+                                    <label class="block text-gray-300 mb-2">Word Language</label>
+                                    <select v-model="gameConfig.word_language" @change="updateConfig"
+                                        :disabled="!amIHost"
+                                        class="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500">
+                                        <option value="English">English</option>
+                                        <option value="Ukrainian">Ukrainian</option>
+                                    </select>
                                 </div>
 
                                 <!-- Host Plays -->
@@ -263,7 +276,7 @@
                             </div>
 
                             <!-- Canvas -->
-                            <div class="w-full aspect-[5/3] relative bg-white rounded flex flex-col"
+                            <div class="w-full aspect-[4/3] relative bg-white rounded flex flex-col"
                                 id="canvas-container">
                                 <canvas ref="gameCanvas"
                                     class="w-full h-full block cursor-crosshair touch-none"></canvas>
@@ -307,19 +320,37 @@
                                 <p class="text-xl text-gray-300 mb-4">The word was: <span
                                         class="text-green-400 font-bold">{{ gameStateData.word }}</span></p>
 
-                                <div v-if="gameStateData.phase === 'GAME_OVER'"
-                                    class="bg-gray-800 p-6 rounded-lg w-full max-w-sm">
-                                    <h3 class="text-xl font-bold mb-4 text-center">Final Scores</h3>
-                                    <ul>
-                                        <li v-for="(score, name) in gameStateData.scores" :key="name"
-                                            class="flex justify-between py-2 border-b border-gray-700">
-                                            <span>{{ name }}</span>
-                                            <span class="font-bold text-yellow-500">{{ score }}</span>
+                                <div class="bg-gray-800 p-6 rounded-lg w-full max-w-sm">
+                                    <div v-if="sortedPlayers.length > 0" class="mb-6 text-center">
+                                        <div class="text-sm text-gray-400 uppercase tracking-widest mb-1">Winner</div>
+                                        <div
+                                            class="text-3xl font-black text-yellow-400 flex items-center justify-center gap-2">
+                                            <span>🏆</span> {{ sortedPlayers[0].nickname }}
+                                        </div>
+                                        <div class="text-white font-bold">{{ sortedPlayers[0].score }} pts</div>
+                                    </div>
+
+                                    <h3 class="text-xl font-bold mb-4 text-center text-gray-400 text-sm uppercase">
+                                        Leaderboard</h3>
+                                    <ul class="space-y-2">
+                                        <li v-for="(p, idx) in sortedPlayers" :key="p.nickname"
+                                            class="flex justify-between items-center p-3 rounded bg-gray-700"
+                                            :class="idx === 0 ? 'border-2 border-yellow-500/50 bg-gray-700/80' : ''">
+                                            <div class="flex items-center gap-3">
+                                                <span class="font-mono text-gray-500 w-4 text-right">{{ idx + 1
+                                                    }}</span>
+                                                <span :class="idx === 0 ? 'font-bold text-white' : 'text-gray-300'">{{
+                                                    p.nickname }}</span>
+                                            </div>
+                                            <span class="font-bold"
+                                                :class="idx === 0 ? 'text-yellow-400' : 'text-gray-400'">{{ p.score
+                                                }}</span>
                                         </li>
                                     </ul>
                                     <button v-if="amIHost" @click="startGame"
-                                        class="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded">Play
-                                        Again</button>
+                                        class="mt-8 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-lg shadow-lg hover:shadow-xl transition-all active:scale-95">
+                                        Play Again
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -327,7 +358,7 @@
 
                     <!-- Sidebar: Chat -->
                     <div
-                        class="bg-gray-800 p-2 sm:p-4 rounded-lg col-span-1 flex flex-col h-[180px] lg:h-[600px] mt-1 lg:mt-0">
+                        class="order-3 lg:order-none bg-gray-800 p-2 sm:p-4 rounded-lg col-span-1 flex flex-col h-[180px] lg:h-[600px] mt-0">
                         <h3 class="font-bold mb-2 text-gray-400 uppercase text-xs">Chat</h3>
                         <div class="flex-1 overflow-y-auto bg-gray-700 rounded p-2 mb-2 space-y-1" id="chat-box">
                             <div v-for="(msg, i) in messages" :key="i" class="text-sm">
@@ -477,7 +508,11 @@
                         points_to_win: 50,
                         base_points: 10,
                         turn_order: 'sequence',
-                        host_plays: true
+                        points_to_win: 50,
+                        base_points: 10,
+                        turn_order: 'sequence',
+                        host_plays: true,
+                        word_language: 'English'
                     },
                     configTimeout: null,
 
@@ -536,6 +571,9 @@
                 },
                 hasGuessed() {
                     return this.gameStateData.correct_guessers && this.gameStateData.correct_guessers.includes(this.nickname);
+                },
+                sortedPlayers() {
+                    return [...this.players].sort((a, b) => b.score - a.score);
                 }
             },
             watch: {
@@ -676,7 +714,7 @@
                     // Use a high-quality fixed internal resolution for consistent coordinate mapping
                     // This prevents displacement and stretching issues when window is resized.
                     canvas.width = 2000;
-                    canvas.height = 1200;
+                    canvas.height = 1500;
 
                     this.ctx = canvas.getContext('2d');
                     this.ctx.lineCap = 'round';
@@ -956,6 +994,7 @@
                         const p = msg.payload;
                         this.drawStroke(p.x1, p.y1, p.x2, p.y2, p.color);
                     } else if (msg.type === "STROKE_HISTORY_UPDATE") {
+                        console.log("STROKE_HISTORY_UPDATE", msg.payload.history);
                         this.strokeHistory = msg.payload.history;
                         this.redrawFromHistory(this.strokeHistory);
                     } else if (msg.type === "CLEAR_CANVAS") {
