@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Party Games Service</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            color: white;
+        }
+
+        .fade-enter-active,
+        .fade-leave-active {
+            transition: opacity 0.3s;
+        }
+
+        .fade-enter-from,
+        .fade-leave-to {
+            opacity: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" class="min-h-screen flex flex-col items-center p-1 sm:p-4">
+        <header class="w-full max-w-4xl flex justify-between items-center mb-8 mt-4">
+            <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">
+                Party Games</h1>
+            <div v-if="nickname" class="text-gray-300">
+                Playing as: <span class="font-bold text-white">{{ nickname }}</span>
+            </div>
+        </header>
+
+        <!-- View: Login -->
+        <transition name="fade" mode="out-in">
+            <div v-if="view === 'login'" class="bg-gray-800 p-8 rounded-lg shadow-xl w-full max-w-md">
+                <h2 class="text-xl mb-4 font-semibold">Enter Nickname</h2>
+                <input v-model="nicknameInput" @keyup.enter="setNickname" type="text"
+                    placeholder="Your cool nickname..."
+                    class="w-full p-3 rounded bg-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4">
+                <button @click="setNickname"
+                    class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded transition">Enter
+                    Lobby</button>
+            </div>
+
+            <!-- View: Lobby -->
+            <div v-else-if="view === 'lobby'" class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Room List -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Open Rooms</h2>
+                        <button @click="fetchRooms"
+                            class="text-sm text-purple-400 hover:text-purple-300">Refresh</button>
+                    </div>
+                    <div v-if="rooms.length === 0" class="text-gray-500 text-center py-8">
+                        No rooms found. Create one!
+                    </div>
+                    <ul v-else class="space-y-2">
+                        <li v-for="room in rooms" :key="room.id"
+                            class="flex justify-between items-center bg-gray-700 p-3 rounded hover:bg-gray-600 transition">
+                            <div>
+                                <span class="font-bold">{{ room.name }}</span>
+                                <span v-if="room.has_password" class="ml-2 text-xs text-yellow-500">🔒</span>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <span class="text-sm text-gray-400">{{ room.players_count }} active</span>
+                                <button @click="joinRoom(room.id)"
+                                    class="bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-sm">Join</button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Create Room -->
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl h-fit">
+                    <h2 class="text-xl font-semibold mb-4">Create Room</h2>
+                    <input v-model="newRoomName" type="text" placeholder="Room Name"
+                        class="w-full p-3 rounded bg-gray-700 text-white mb-3 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                    <input v-model="newRoomPassword" type="text" placeholder="Password (Optional)"
+                        class="w-full p-3 rounded bg-gray-700 text-white mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
+
+                    <label class="block text-gray-400 text-sm mb-1">Game Mode</label>
+                    <select v-model="selectedGameType"
+                        class="w-full p-3 rounded bg-gray-700 text-white mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500">
+                        <option value="drawing">Drawing Guesser</option>
+                    </select>
+
+                    <button @click="createRoom"
+                        class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 rounded transition">Create
+                        & Join</button>
+                </div>
+            </div>
+
+            <!-- View: Room (Game) -->
+            <div v-else-if="view === 'room'" class="w-full max-w-6xl">
+                <div class="mb-4 flex justify-between items-center">
+                    <button @click="leaveRoom" class="text-gray-400 hover:text-white">← Leave Room</button>
+                    <div class="flex gap-4">
+                        <div v-if="gameState === 'lobby'" class="flex gap-4">
+                            <button @click="toggleReady"
+                                :class="amIReady ? 'bg-gray-500 hover:bg-gray-400' : 'bg-green-600 hover:bg-green-500'"
+                                class="px-6 py-2 rounded font-bold text-white transition">
+                                {{ amIReady ? 'Unready' : 'Ready' }}
+                            </button>
+                            <button v-if="amIHost" @click="startGame" :disabled="!canStart"
+                                :class="canStart ? 'bg-yellow-500 hover:bg-yellow-400 text-black' : 'bg-gray-700 text-gray-500 cursor-not-allowed'"
+                                class="px-6 py-2 rounded font-bold transition">
+                                Start Game
+                            </button>
+                        </div>
+                        <div v-else class="text-yellow-500 font-bold text-xl animate-pulse">
+                            GAME IN PROGRESS
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-4 gap-2 sm:gap-4 lg:h-[600px]">
+                    <!-- Sidebar: Players -->
+                    <div class="bg-gray-800 p-4 rounded-lg col-span-1 overflow-y-auto">
+                        <h3 class="font-bold mb-2 text-gray-400 uppercase text-xs">Players ({{ players.length }})</h3>
+                        <ul class="space-y-2">
+                            <li v-for="p in players" :key="p.nickname"
+                                class="flex items-center justify-between bg-gray-700 p-2 rounded">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white relative shadow-md"
+                                        :style="{backgroundColor: p.color}">
+                                        {{ p.nickname[0] }}
+                                        <span v-if="p.is_host" class="absolute -top-1 -right-1 text-xs">👑</span>
+                                    </div>
+                                    <span class="truncate max-w-[100px]" :style="{color: p.color}">{{ p.nickname
+                                        }}</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm font-bold text-yellow-500">{{ p.score || 0 }}</span>
+                                    <span v-if="p.is_ready" class="text-green-400 text-xl">✓</span>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Main: Game Area (Canvas/Config placeholder) -->
+                    <div
+                        class="bg-gray-900 rounded-lg col-span-2 flex flex-col items-center justify-center border-2 border-dashed border-gray-700 relative p-8">
+                        <div v-if="gameState === 'lobby'" class="w-full max-w-md">
+                            <h3 class="text-xl font-bold mb-6 text-center text-purple-400">Game Configuration</h3>
+
+                            <div class="space-y-6">
+                                <!-- Round Duration -->
+                                <div>
+                                    <div class="flex justify-between mb-2">
+                                        <label class="text-gray-300">Round Duration</label>
+                                        <span class="text-purple-400 font-bold">{{ gameConfig.round_duration }}s</span>
+                                    </div>
+                                    <input type="range" min="30" max="180" step="10"
+                                        v-model.number="gameConfig.round_duration" @input="updateConfig"
+                                        :disabled="!amIHost"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+
+                                <!-- Points to Win -->
+                                <div>
+                                    <div class="flex justify-between mb-2">
+                                        <label class="text-gray-300">Points to Win</label>
+                                        <span class="text-purple-400 font-bold">{{ gameConfig.points_to_win }}</span>
+                                    </div>
+                                    <input type="range" min="5" max="250" step="5"
+                                        v-model.number="gameConfig.points_to_win" @input="updateConfig"
+                                        :disabled="!amIHost"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+
+                                <!-- Base Points -->
+                                <div>
+                                    <div class="flex justify-between mb-2">
+                                        <label class="text-gray-300">Base Points (First Guess)</label>
+                                        <span class="text-purple-400 font-bold">{{ gameConfig.base_points || 10
+                                            }}</span>
+                                    </div>
+                                    <input type="range" min="1" :max="gameConfig.points_to_win" step="1"
+                                        v-model.number="gameConfig.base_points" @input="updateConfig"
+                                        :disabled="!amIHost"
+                                        class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer">
+                                </div>
+
+                                <!-- Turn Order -->
+                                <div>
+                                    <label class="block text-gray-300 mb-2">Turn Order</label>
+                                    <div class="flex gap-4">
+                                        <button @click="setTurnOrder('sequence')" :disabled="!amIHost"
+                                            :class="gameConfig.turn_order === 'sequence' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-400'"
+                                            class="flex-1 py-2 rounded transition border border-transparent hover:border-purple-500">
+                                            Sequential
+                                        </button>
+                                        <button @click="setTurnOrder('winner')" :disabled="!amIHost"
+                                            :class="gameConfig.turn_order === 'winner' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-400'"
+                                            class="flex-1 py-2 rounded transition border border-transparent hover:border-purple-500">
+                                            Winner First
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Host Plays -->
+                                <div class="flex items-center justify-between">
+                                    <label class="text-gray-300 font-medium">Host Plays</label>
+                                    <button @click="toggleHostPlays" :disabled="!amIHost" type="button"
+                                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-600 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                        :class="[gameConfig.host_plays ? 'bg-purple-600' : 'bg-gray-700', !amIHost ? 'cursor-not-allowed opacity-50' : '']">
+                                        <span class="sr-only">Use setting</span>
+                                        <span aria-hidden="true"
+                                            :class="gameConfig.host_plays ? 'translate-x-5' : 'translate-x-0'"
+                                            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p v-if="!amIHost" class="mt-8 text-center text-gray-500 text-sm italic">Only the host can
+                                change settings.</p>
+                        </div>
+
+                        <div v-else class="w-full h-full flex flex-col relative text-white">
+                            <!-- Top Bar: Info -->
+                            <div class="flex justify-between items-center mb-1 px-1 sm:px-2">
+                                <div class="text-[10px] sm:text-sm">
+                                    <span class="text-gray-400">Round</span>
+                                    <span class="font-bold ml-1">{{ gameStateData.round }}</span>
+                                </div>
+                                <div class="text-xl sm:text-2xl font-mono font-bold"
+                                    :class="timeLeft < 10 && gameStateData.phase === 'DRAWING' ? 'text-red-500' : 'text-white'">
+                                    {{ gameStateData.phase === 'DRAWING' ? timeLeft + 's' : (gameStateData.phase ===
+                                    'DRAWER_PREPARING' ? 'READY?' : '') }}
+                                </div>
+                                <div class="text-[10px] sm:text-sm text-right">
+                                    <div v-if="gameStateData.phase === 'DRAWING'">
+                                        <span class="text-gray-400">Drawer:</span>
+                                        <span class="text-yellow-400 font-bold ml-1">{{ gameStateData.drawer }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Word Display -->
+                            <div class="mb-1 sm:mb-4 text-center">
+                                <h2 v-if="amIDrawing"
+                                    class="text-xl sm:text-3xl font-bold text-green-400 tracking-wider">
+                                    {{ gameStateData.word }}</h2>
+                                <h2 v-else
+                                    class="text-xl sm:text-3xl font-bold text-gray-300 tracking-[0.3em] sm:tracking-[0.5em]">
+                                    {{ gameStateData.word_hints }}</h2>
+                                <p v-if="amIDrawing" class="text-[10px] sm:text-xs text-gray-500">You are drawing!</p>
+                                <p v-else class="text-[10px] sm:text-xs text-gray-500 leading-tight">Guess the word!</p>
+                            </div>
+
+                            <!-- START ROUND BUTTON (DRAWER ONLY) -->
+                            <div v-if="amIDrawing && gameStateData.phase === 'DRAWER_PREPARING'"
+                                class="absolute inset-0 z-20 flex items-center justify-center bg-black/40 rounded-lg">
+                                <button @click="startActiveRound"
+                                    class="bg-green-600 hover:bg-green-500 text-white text-2xl font-bold py-6 px-12 rounded-xl shadow-2xl transform hover:scale-105 transition-all">
+                                    START ROUND!
+                                </button>
+                            </div>
+
+                            <!-- Canvas -->
+                            <div class="w-full aspect-[5/3] relative bg-white rounded flex flex-col"
+                                id="canvas-container">
+                                <canvas ref="gameCanvas"
+                                    class="w-full h-full block cursor-crosshair touch-none"></canvas>
+
+                                <!-- Top-Right Actions (Drawer Only) -->
+                                <div v-if="amIDrawing"
+                                    class="absolute top-2 right-2 flex items-center gap-1 bg-gray-900 bg-opacity-60 p-1 px-2 rounded-lg border border-gray-700 shadow-2xl backdrop-blur-sm z-30">
+                                    <button @click="undoStroke" title="Undo last stroke"
+                                        class="text-white hover:text-yellow-400 text-lg transition-all active:scale-90 p-0.5">
+                                        <span>↩️</span>
+                                    </button>
+
+                                    <div class="w-px h-4 bg-gray-700"></div>
+
+                                    <button @click="clearCanvas" title="Clear all drawings"
+                                        class="text-white hover:text-red-400 text-lg transition-all active:scale-90 p-0.5">
+                                        <span>🗑️</span>
+                                    </button>
+                                </div>
+
+                                <!-- Tools Overlay (Drawer Only) -->
+                                <div v-if="amIDrawing"
+                                    class="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex items-center justify-center bg-gray-800 p-1.5 sm:p-3 rounded-xl sm:rounded-2xl shadow-2xl border border-gray-700 max-w-[98%] w-max z-20">
+
+                                    <!-- Color Palette -->
+                                    <div class="flex flex-wrap gap-1 sm:gap-2 justify-center">
+                                        <template v-for="c in drawColors" :key="c">
+                                            <button @click="setBrushColor(c)" :style="{backgroundColor: c}"
+                                                class="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-transparent hover:scale-110 transition shrink-0"
+                                                :class="{'ring-2 ring-white': currentBrushColor === c}"></button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Overlay: Round End / Game Over -->
+                            <div v-if="gameStateData.phase === 'POST_ROUND' || gameStateData.phase === 'GAME_OVER'"
+                                class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center rounded-lg z-10 text-center p-4">
+                                <h2 class="text-4xl font-bold text-white mb-2">{{ gameStateData.phase === 'GAME_OVER' ?
+                                    'GAME OVER!' : 'Round Over!' }}</h2>
+                                <p class="text-xl text-gray-300 mb-4">The word was: <span
+                                        class="text-green-400 font-bold">{{ gameStateData.word }}</span></p>
+
+                                <div v-if="gameStateData.phase === 'GAME_OVER'"
+                                    class="bg-gray-800 p-6 rounded-lg w-full max-w-sm">
+                                    <h3 class="text-xl font-bold mb-4 text-center">Final Scores</h3>
+                                    <ul>
+                                        <li v-for="(score, name) in gameStateData.scores" :key="name"
+                                            class="flex justify-between py-2 border-b border-gray-700">
+                                            <span>{{ name }}</span>
+                                            <span class="font-bold text-yellow-500">{{ score }}</span>
+                                        </li>
+                                    </ul>
+                                    <button v-if="amIHost" @click="startGame"
+                                        class="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded">Play
+                                        Again</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sidebar: Chat -->
+                    <div
+                        class="bg-gray-800 p-2 sm:p-4 rounded-lg col-span-1 flex flex-col h-[180px] lg:h-[600px] mt-1 lg:mt-0">
+                        <h3 class="font-bold mb-2 text-gray-400 uppercase text-xs">Chat</h3>
+                        <div class="flex-1 overflow-y-auto bg-gray-700 rounded p-2 mb-2 space-y-1" id="chat-box">
+                            <div v-for="(msg, i) in messages" :key="i" class="text-sm">
+                                <span :style="{color: msg.color}" class="font-bold">{{ msg.sender }}:</span>
+                                <span class="text-gray-200 ml-1">{{ msg.text }}</span>
+                            </div>
+                        </div>
+                        <input v-model="chatInput" @keyup.enter="sendChat" type="text"
+                            :disabled="(amIDrawing && gameStateData.phase === 'DRAWING') || (hasGuessed && gameStateData.phase === 'DRAWING')"
+                            :placeholder="amIDrawing ? 'You are drawing...' : (hasGuessed ? 'You guessed correctly!' : 'Type a guess...')"
+                            class="w-full p-2 rounded bg-gray-900 text-white focus:outline-none focus:ring-1 focus:ring-purple-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                    </div>
+                </div>
+
+                <!-- Results Modal -->
+                <div v-if="gameStateData.phase === 'DRAWER_PREPARING'"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4">
+                    <div
+                        class="bg-gray-800 w-full max-w-2xl rounded-2xl shadow-2xl border border-gray-700 overflow-hidden transform transition-all">
+                        <div
+                            class="p-6 border-b border-gray-700 flex justify-between items-center bg-gray-900 bg-opacity-50">
+                            <div>
+                                <h2 class="text-2xl font-black text-white uppercase tracking-wider">
+                                    Next Up: {{ gameStateData.drawer }}
+                                </h2>
+                                <p v-if="gameStateData.last_drawer" class="text-purple-400 text-sm font-bold">
+                                    <span class="text-white">{{ gameStateData.last_drawer }}</span> was drawing a <span
+                                        class="text-white uppercase tracking-wider">{{ gameStateData.last_word }}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="p-6 space-y-4 max-h-[50vh] overflow-y-auto">
+                            <transition-group name="results-list" tag="div" class="space-y-4">
+                                <div v-for="(res, idx) in animatedResults" :key="res.nickname"
+                                    class="relative flex items-center gap-4 p-3 bg-gray-700 bg-opacity-40 rounded-xl border-2 transition-all duration-500 animate-slide-in"
+                                    :class="res.nickname === gameStateData.last_drawer ? 'border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'border-transparent'"
+                                    :style="{ animationDelay: (idx * 0.1) + 's' }">
+
+                                    <div class="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-xl font-bold text-white shadow-lg relative"
+                                        :style="{ backgroundColor: getPlayerColor(res.nickname) }">
+                                        {{ res.nickname[0] }}
+                                        <!-- Rank Badge -->
+                                        <div v-if="getRank(res.nickname)"
+                                            class="absolute -top-2 -left-2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] text-black font-black border-2 border-gray-800">
+                                            #{{ getRank(res.nickname) }}
+                                        </div>
+                                    </div>
+
+                                    <div class="flex-1">
+                                        <div class="flex justify-between items-end mb-1">
+                                            <span class="font-bold text-gray-200 text-lg">{{ res.nickname }} <span
+                                                    v-if="res.nickname === gameStateData.last_drawer"
+                                                    class="text-xs text-purple-400 italic">(Drawer)</span></span>
+                                            <span class="text-green-400 font-black text-xl animate-pulse">+{{ res.points
+                                                }}</span>
+                                        </div>
+                                        <div
+                                            class="relative h-3 w-full bg-gray-900 rounded-full overflow-hidden flex shadow-inner">
+                                            <!-- Base Score Segment -->
+                                            <div class="h-full bg-indigo-600 transition-all duration-1000 ease-out"
+                                                :style="{ width: getBaseScorePercentage(res.nickname) + '%' }"></div>
+                                            <!-- New Points Segment -->
+                                            <div class="h-full bg-emerald-400 transition-all duration-1000 ease-out fill-animation border-l border-white border-opacity-20"
+                                                :style="{ width: getNewPointsPercentage(res.nickname) + '%' }"></div>
+                                        </div>
+                                        <div class="flex justify-between mt-1">
+                                            <span class="text-xs text-gray-400 font-medium">Total: <span
+                                                    class="text-white">{{ getBaseScore(res.nickname) +
+                                                    res.points }}</span></span>
+                                            <span v-if="res.nickname === gameStateData.last_drawer"
+                                                class="text-xs text-gray-400 italic">
+                                                {{ gameStateData.first_guesser_nickname }} guessed in {{ res.time }}s
+                                            </span>
+                                            <span v-else-if="res.time" class="text-xs text-gray-400 italic">Guessed in
+                                                {{
+                                                res.time }}s</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </transition-group>
+                        </div>
+
+                        <div class="p-6 bg-gray-900 bg-opacity-50 text-center flex flex-col items-center gap-4">
+                            <p v-if="gameStateData.phase === 'DRAWER_PREPARING' && amIDrawing"
+                                class="text-purple-400 text-sm font-bold">
+                                Your NEW word is: <span class="text-white uppercase tracking-widest text-lg">{{
+                                    gameStateData.word }}</span>
+                            </p>
+                            <div v-if="gameStateData.phase === 'DRAWER_PREPARING'" class="w-full">
+                                <template v-if="amIDrawing">
+                                    <button @click="startActiveRound"
+                                        class="w-full py-4 bg-green-600 hover:bg-green-500 text-white rounded-xl font-black text-xl shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all animate-bounce-subtle">
+                                        START ROUND!
+                                    </button>
+                                </template>
+                                <template v-else>
+                                    <div class="flex items-center justify-center gap-3 py-4 text-gray-400">
+                                        <svg class="animate-spin h-5 w-5 text-purple-500"
+                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor"
+                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                            </path>
+                                        </svg>
+                                        <span class="font-bold">Wait for <span class="text-white">{{
+                                                gameStateData.drawer }}</span> to start...</span>
+                                    </div>
+                                </template>
+                            </div>
+                            <div v-else class="text-gray-500 text-sm font-medium">Preparing next turn...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue
+
+        createApp({
+            data() {
+                return {
+                    view: 'login', // login, lobby, room
+                    nickname: '',
+                    nicknameInput: '',
+
+                    // Lobby
+                    rooms: [],
+                    newRoomName: '',
+                    newRoomPassword: '',
+                    selectedGameType: 'drawing',
+
+                    // Room / Game
+                    currentRoomId: null,
+                    socket: null,
+                    players: [],
+                    messages: [],
+                    chatInput: '',
+                    clientId: Math.random().toString(36).substr(2, 9),
+                    gameState: 'lobby', // lobby, playing
+                    gameConfig: {
+                        round_duration: 60,
+                        points_to_win: 50,
+                        base_points: 10,
+                        turn_order: 'sequence',
+                        host_plays: true
+                    },
+                    configTimeout: null,
+
+                    // Game State
+                    gameStateData: {
+                        round: 0,
+                        drawer: null,
+                        phase: 'PRE_ROUND',
+                        timer_end: 0,
+                        time_left: 0,
+                        word: '',
+                        word_hints: '',
+                        scores: {},
+                        correct_guessers: []
+                    },
+                    timeLeft: 0,
+                    localTimerEnd: 0,
+                    timerInterval: null,
+
+                    // Canvas
+                    ctx: null,
+                    isDrawing: false,
+                    lastX: 0,
+                    lastY: 0,
+                    currentBrushColor: '#000000',
+                    drawColors: ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFFFFF', '#8B4513', '#FFA500'],
+                    strokeHistory: [],
+                    // Animation & Results
+                    animatedResults: [],
+                    lastTurnResults: {},
+                    resultsScores: {} // Local scoreboard for animation
+                }
+            },
+            computed: {
+                amIHost() {
+                    const p = this.players.find(p => p.nickname === this.nickname);
+                    return p ? p.is_host : false;
+                },
+                amIReady() {
+                    const p = this.players.find(p => p.nickname === this.nickname);
+                    return p ? p.is_ready : false;
+                },
+                canStart() {
+                    if (this.players.length < 2) return false;
+                    const hostPlays = this.gameConfig.host_plays;
+                    const playing = this.players.filter(p => !p.is_host || hostPlays);
+                    // Need at least 2 playing players? Or just 2 total connections?
+                    // Server check: need 2 playing players.
+                    // If Host Spectates: Need 2 OTHER players.
+                    // If Host Plays: Need 1 OTHER player (Total 2).
+                    // This visual check is approx, server is authority.
+                    return this.players.every(p => p.is_ready);
+                },
+                amIDrawing() {
+                    return this.gameStateData.drawer === this.nickname;
+                },
+                hasGuessed() {
+                    return this.gameStateData.correct_guessers && this.gameStateData.correct_guessers.includes(this.nickname);
+                }
+            },
+            watch: {
+                gameState(newVal) {
+                    if (newVal === 'playing') {
+                        this.$nextTick(() => {
+                            this.initCanvas();
+                        });
+                    }
+                },
+                'gameConfig.points_to_win'(newVal) {
+                    if (this.gameConfig.base_points > newVal) {
+                        this.gameConfig.base_points = newVal;
+                        this.updateConfig();
+                    }
+                },
+                'gameStateData.phase'(newVal, oldVal) {
+                    if (newVal === 'DRAWER_PREPARING' && oldVal !== 'DRAWER_PREPARING') {
+                        this.startResultsAnimation();
+                    } else if (newVal !== 'DRAWER_PREPARING') {
+                        this.animatedResults = [];
+                    }
+                }
+            },
+            mounted() {
+                window.addEventListener('resize', this.handleResize);
+                const savedNick = localStorage.getItem('nickname');
+                const savedRoom = localStorage.getItem('roomId');
+                if (savedNick) {
+                    this.nickname = savedNick;
+                    if (savedRoom) {
+                        this.view = 'room';
+                        this.currentRoomId = savedRoom;
+                        this.connectWebSocket();
+                    } else {
+                        this.view = 'lobby';
+                        this.fetchRooms();
+                    }
+                }
+            },
+            methods: {
+                setNickname() {
+                    if (!this.nicknameInput.trim()) return;
+                    this.nickname = this.nicknameInput.trim();
+                    localStorage.setItem('nickname', this.nickname);
+                    this.view = 'lobby';
+                    this.fetchRooms();
+                },
+                async fetchRooms() {
+                    try {
+                        const res = await fetch('/api/rooms');
+                        this.rooms = await res.json();
+                    } catch (e) { console.error("Failed to fetch rooms", e); }
+                },
+                async createRoom() {
+                    if (!this.newRoomName.trim()) return;
+                    try {
+                        const res = await fetch('/api/rooms', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                name: this.newRoomName,
+                                password: this.newRoomPassword || null,
+                                game_type: this.selectedGameType,
+                                config: this.gameConfig
+                            })
+                        });
+                        const data = await res.json();
+                        this.joinRoom(data.room_id);
+                    } catch (e) { console.error("Failed to create room", e); }
+                },
+                joinRoom(roomId) {
+                    this.currentRoomId = roomId;
+                    localStorage.setItem('roomId', roomId);
+                    this.view = 'room';
+                    this.connectWebSocket();
+                },
+                leaveRoom() {
+                    if (this.socket) {
+                        this.socket.close();
+                        this.socket = null;
+                    }
+                    this.currentRoomId = null;
+                    localStorage.removeItem('roomId');
+                    this.players = [];
+                    this.messages = [];
+                    this.gameState = 'lobby';
+                    this.view = 'lobby';
+                    this.fetchRooms();
+                },
+                toggleReady() {
+                    if (!this.socket) return;
+                    this.socket.send(JSON.stringify({
+                        type: "TOGGLE_READY",
+                        payload: { is_ready: !this.amIReady }
+                    }));
+                },
+                startGame() {
+                    if (!this.socket) return;
+                    this.socket.send(JSON.stringify({
+                        type: "START_GAME",
+                        payload: {}
+                    }));
+                },
+                startActiveRound() {
+                    if (!this.socket) return;
+                    this.socket.send(JSON.stringify({
+                        type: "START_ROUND",
+                        payload: {}
+                    }));
+                },
+                setTurnOrder(order) {
+                    if (!this.amIHost) return;
+                    this.gameConfig.turn_order = order;
+                    this.updateConfig();
+                },
+                toggleHostPlays() {
+                    if (!this.amIHost) return;
+                    this.gameConfig.host_plays = !this.gameConfig.host_plays;
+                    this.updateConfig();
+                },
+                updateConfig() {
+                    if (!this.amIHost || !this.socket) return;
+                    if (this.configTimeout) clearTimeout(this.configTimeout);
+                    this.configTimeout = setTimeout(() => {
+                        this.socket.send(JSON.stringify({
+                            type: "UPDATE_CONFIG",
+                            payload: { config: this.gameConfig }
+                        }));
+                    }, 300);
+                },
+
+                // --- Canvas ---
+                initCanvas() {
+                    const canvas = this.$refs.gameCanvas;
+                    if (!canvas) return;
+
+                    // Use a high-quality fixed internal resolution for consistent coordinate mapping
+                    // This prevents displacement and stretching issues when window is resized.
+                    canvas.width = 2000;
+                    canvas.height = 1200;
+
+                    this.ctx = canvas.getContext('2d');
+                    this.ctx.lineCap = 'round';
+                    this.ctx.lineJoin = 'round';
+                    this.ctx.lineWidth = 5;
+
+                    // Redraw if we already have history (e.g. after resize)
+                    if (this.strokeHistory.length > 0) {
+                        this.redrawFromHistory(this.strokeHistory);
+                    }
+
+                    // Mouse
+                    canvas.addEventListener('mousedown', this.startDrawing);
+                    canvas.addEventListener('mousemove', this.draw);
+                    canvas.addEventListener('mouseup', this.stopDrawing);
+                    canvas.addEventListener('mouseout', this.stopDrawing);
+
+                    // Touch
+                    canvas.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const mouseEvent = new MouseEvent('mousedown', {
+                            clientX: touch.clientX,
+                            clientY: touch.clientY
+                        });
+                        canvas.dispatchEvent(mouseEvent);
+                    }, { passive: false });
+                    canvas.addEventListener('touchmove', (e) => {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const mouseEvent = new MouseEvent('mousemove', {
+                            clientX: touch.clientX,
+                            clientY: touch.clientY
+                        });
+                        canvas.dispatchEvent(mouseEvent);
+                    }, { passive: false });
+                    canvas.addEventListener('touchend', () => {
+                        const mouseEvent = new MouseEvent('mouseup', {});
+                        canvas.dispatchEvent(mouseEvent);
+                    });
+                },
+                getPos(e) {
+                    const canvas = this.$refs.gameCanvas;
+                    const rect = canvas.getBoundingClientRect();
+                    // Crucial: Use current display dimensions (rect) to calculate fraction,
+                    // not the internal resolution (canvas.width/height).
+                    return {
+                        x: (e.clientX - rect.left) / rect.width,
+                        y: (e.clientY - rect.top) / rect.height
+                    };
+                },
+                startDrawing(e) {
+                    if (!this.amIDrawing) return;
+                    this.isDrawing = true;
+                    const pos = this.getPos(e);
+                    this.lastX = pos.x;
+                    this.lastY = pos.y;
+                },
+                draw(e) {
+                    if (!this.isDrawing || !this.amIDrawing) return;
+                    const pos = this.getPos(e);
+
+                    // Local Draw
+                    this.drawStroke(this.lastX, this.lastY, pos.x, pos.y, this.currentBrushColor);
+
+                    // Server Send
+                    this.socket.send(JSON.stringify({
+                        type: "DRAW_STROKE",
+                        payload: {
+                            x1: this.lastX, y1: this.lastY,
+                            x2: pos.x, y2: pos.y,
+                            color: this.currentBrushColor
+                        }
+                    }));
+
+                    this.lastX = pos.x;
+                    this.lastY = pos.y;
+                },
+                stopDrawing() {
+                    this.isDrawing = false;
+                },
+                drawStroke(x1, y1, x2, y2, color, fromHistory = false) {
+                    if (!this.ctx) return;
+                    const w = this.$refs.gameCanvas.width;
+                    const h = this.$refs.gameCanvas.height;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x1 * w, y1 * h);
+                    this.ctx.lineTo(x2 * w, y2 * h);
+                    this.ctx.strokeStyle = color;
+                    this.ctx.stroke();
+
+                    if (!fromHistory) {
+                        this.strokeHistory.push({ x1, y1, x2, y2, color });
+                    }
+                },
+                setBrushColor(c) {
+                    this.currentBrushColor = c;
+                },
+                undoStroke() {
+                    if (!this.amIDrawing || !this.socket) return;
+                    this.socket.send(JSON.stringify({ type: "UNDO_STROKE", payload: {} }));
+                },
+                clearCanvas() {
+                    if (!this.amIDrawing) return;
+                    this.performClear();
+                    this.socket.send(JSON.stringify({ type: "CLEAR_CANVAS", payload: {} }));
+                },
+                performClear() {
+                    this.clearPixels();
+                    this.strokeHistory = [];
+                },
+                clearPixels() {
+                    if (!this.ctx) return;
+                    this.ctx.clearRect(0, 0, this.$refs.gameCanvas.width, this.$refs.gameCanvas.height);
+                },
+                handleResize() {
+                    if (this.gameState === 'playing' && this.$refs.gameCanvas) {
+                        this.redrawFromHistory(this.strokeHistory);
+                    }
+                },
+                redrawFromHistory(history) {
+                    this.clearPixels();
+                    if (!history) return;
+                    history.forEach(stroke => {
+                        this.drawStroke(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, true);
+                    });
+                },
+
+                // --- Connection ---
+                connectWebSocket() {
+                    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+                    const wsUrl = `${protocol}://${window.location.host}/ws/${this.currentRoomId}/${this.clientId}`;
+                    this.socket = new WebSocket(wsUrl);
+
+                    this.socket.onopen = () => {
+                        this.socket.send(JSON.stringify({
+                            type: "JOIN",
+                            payload: { nickname: this.nickname }
+                        }));
+                    };
+
+                    this.socket.onmessage = (event) => {
+                        const msg = JSON.parse(event.data);
+                        this.handleMessage(msg);
+                    };
+
+                    this.socket.onclose = () => { console.log("Disconnected"); };
+                },
+                startResultsAnimation() {
+                    const results = this.lastTurnResults;
+                    const players = [...this.players];
+
+                    // Initialize results scores with the values BEFORE adding points
+                    players.forEach(p => {
+                        const delta = results[p.nickname] ? results[p.nickname].points : 0;
+                        this.resultsScores[p.nickname] = p.score - delta;
+                    });
+
+                    this.animatedResults = [];
+                    const sortedNicks = Object.keys(results).sort((a, b) => {
+                        // Guessers first by time, then drawer
+                        if (a === this.gameStateData.drawer) return 1;
+                        if (b === this.gameStateData.drawer) return -1;
+                        return results[a].time - results[b].time;
+                    });
+
+                    let i = 0;
+                    const interval = setInterval(() => {
+                        if (i >= sortedNicks.length) {
+                            clearInterval(interval);
+
+                            // Re-sort results list for the ranking update
+                            setTimeout(() => {
+                                this.animatedResults.sort((a, b) => {
+                                    const totalA = this.getBaseScore(a.nickname) + a.points;
+                                    const totalB = this.getBaseScore(b.nickname) + b.points;
+                                    return totalB - totalA;
+                                });
+                                // Also re-sort main sidebar leaderboard
+                                this.players.sort((a, b) => b.score - a.score);
+                            }, 1000);
+                            return;
+                        }
+                        const nick = sortedNicks[i];
+                        this.animatedResults.push({
+                            nickname: nick,
+                            ...results[nick]
+                        });
+                        i++;
+                    }, 800);
+                },
+                getPlayerColor(nickname) {
+                    const p = this.players.find(p => p.nickname === nickname);
+                    return p ? p.color : '#7C3AED';
+                },
+                getBaseScore(nickname) {
+                    return this.resultsScores[nickname] || 0;
+                },
+                getBaseScorePercentage(nickname) {
+                    const base = this.getBaseScore(nickname);
+                    const max = this.gameConfig.points_to_win || 50;
+                    return (base / max) * 100;
+                },
+                getNewPointsPercentage(nickname) {
+                    const pts = this.lastTurnResults[nickname]?.points || 0;
+                    const max = this.gameConfig.points_to_win || 50;
+                    return (pts / max) * 100;
+                },
+                getRank(nickname) {
+                    // Calculate rank based on animatedResults current order (after they are all sorted)
+                    const sorted = [...this.animatedResults].sort((a, b) => {
+                        const totalA = this.getBaseScore(a.nickname) + a.points;
+                        const totalB = this.getBaseScore(b.nickname) + b.points;
+                        return totalB - totalA;
+                    });
+                    const idx = sorted.findIndex(r => r.nickname === nickname);
+                    return idx !== -1 ? idx + 1 : null;
+                },
+                handleMessage(msg) {
+                    console.log("Received:", msg);
+                    if (msg.type === "JOIN_SUCCESS") {
+                        this.players = msg.payload.players;
+                        this.gameState = msg.payload.state || 'lobby';
+                        if (msg.payload.config) this.gameConfig = { ...this.gameConfig, ...msg.payload.config };
+                        this.messages.push({ sender: "System", text: `Joined room. Welcome!` });
+
+                        if (this.gameState === 'playing') {
+                            // Re-join running game? Request state? 
+                            // Wait for next game_state_update...
+                        }
+                    } else if (msg.type === "PLAYER_JOINED") {
+                        this.messages.push({ sender: "System", text: `${msg.payload.nickname} joined.`, color: '#aaaaaa' });
+                        if (!this.players.find(p => p.nickname === msg.payload.nickname)) {
+                            this.players.push({
+                                nickname: msg.payload.nickname,
+                                is_ready: msg.payload.is_ready,
+                                is_host: false,
+                                color: msg.payload.color || '#ffffff'
+                            });
+                        }
+                    } else if (msg.type === "PLAYER_UPDATE") {
+                        const p = this.players.find(p => p.nickname === msg.payload.nickname);
+                        if (p) {
+                            p.is_ready = msg.payload.is_ready;
+                        }
+                    } else if (msg.type === "CONFIG_UPDATE") {
+                        this.gameConfig = { ...this.gameConfig, ...msg.payload.config };
+                    } else if (msg.type === "GAME_STATE_UPDATE") {
+                        this.gameState = 'playing';
+                        const oldPhase = this.gameStateData.phase;
+                        this.gameStateData = msg.payload.game_state;
+                        this.lastTurnResults = msg.payload.turn_results || {};
+
+                        // Score Sync
+                        for (const [nick, score] of Object.entries(msg.payload.scores)) {
+                            const p = this.players.find(p => p.nickname === nick);
+                            if (p) p.score = score;
+                        }
+
+                        // Timer Sync
+                        if (msg.payload.game_state.timer_end > 0) {
+                            this.localTimerEnd = msg.payload.game_state.timer_end;
+                        } else {
+                            this.localTimerEnd = 0;
+                        }
+
+                        if (this.timerInterval) clearInterval(this.timerInterval);
+                        this.updateTimer();
+                        this.timerInterval = setInterval(this.updateTimer, 1000);
+
+                        // Canvas Init & Clears
+                        this.$nextTick(() => {
+                            if (!this.ctx && this.$refs.gameCanvas) this.initCanvas();
+                            if (msg.payload.game_state.phase === 'PRE_ROUND' || msg.payload.game_state.phase === 'DRAWER_PREPARING') this.performClear();
+                        });
+                    } else if (msg.type === "DRAW_STROKE") {
+                        const p = msg.payload;
+                        this.drawStroke(p.x1, p.y1, p.x2, p.y2, p.color);
+                    } else if (msg.type === "STROKE_HISTORY_UPDATE") {
+                        this.strokeHistory = msg.payload.history;
+                        this.redrawFromHistory(this.strokeHistory);
+                    } else if (msg.type === "CLEAR_CANVAS") {
+                        this.performClear();
+                    } else if (msg.type === "PLAYER_DISCONNECTED") {
+                        this.messages.push({ sender: "System", text: `${msg.payload.nickname} disconnected.` });
+                    } else if (msg.type === "PLAYER_LEFT") {
+                        const idx = this.players.findIndex(p => p.nickname === msg.payload.nickname);
+                        if (idx !== -1) this.players.splice(idx, 1);
+                        this.messages.push({ sender: "System", text: `${msg.payload.nickname} left the room.` });
+                    } else if (msg.type === "CHAT") {
+                        this.messages.push(msg.payload);
+                        this.$nextTick(() => {
+                            const el = document.getElementById('chat-box');
+                            if (el) el.scrollTop = el.scrollHeight;
+                        });
+                    } else if (msg.type === "ERROR") {
+                        alert(msg.payload.message);
+                        if (msg.payload.message.includes("taken")) {
+                            this.leaveRoom();
+                        }
+                    }
+                },
+                updateTimer() {
+                    const now = Date.now() / 1000;
+                    this.timeLeft = Math.max(0, Math.floor(this.localTimerEnd - now));
+                    if (this.timeLeft === 0 && this.timerInterval) clearInterval(this.timerInterval);
+                },
+                sendChat() {
+                    if (!this.chatInput.trim() || !this.socket) return;
+                    this.socket.send(JSON.stringify({
+                        type: "CHAT",
+                        payload: { text: this.chatInput }
+                    }));
+                    this.chatInput = '';
+                }
+            }
+        }).mount('#app')
+    </script>
+    <style>
+        @keyframes slide-in {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-slide-in {
+            animation: slide-in 0.5s ease forwards;
+        }
+
+        .fill-animation {
+            width: 0%;
+            transition: width 1s ease-out;
+        }
+
+        @keyframes bounce-subtle {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-3px);
+            }
+        }
+
+        .animate-bounce-subtle {
+            animation: bounce-subtle 2s infinite ease-in-out;
+        }
+
+        /* Results List Reordering Animation */
+        .results-list-move {
+            transition: transform 0.8s ease;
+        }
+    </style>
+</body>
+
+</html>
