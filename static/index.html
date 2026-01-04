@@ -244,7 +244,8 @@
     <div id="app"
         class="h-[100dvh] flex flex-col items-center p-0 sm:p-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-hidden">
         <header
-            class="w-full max-w-4xl flex justify-between items-center mb-2 sm:mb-4 mt-2 sm:mt-4 px-4 sm:px-2 shrink-0">
+            class="w-full max-w-6xl flex justify-between items-center mb-2 sm:mb-4 mt-2 sm:mt-4 px-4 sm:px-0 shrink-0 mx-auto transition-all duration-300"
+            :class="{ 'h-0 opacity-0 mb-0 mt-0 pointer-events-none overflow-hidden': isInputFocused && isMobileView }">
             <div class="flex items-center gap-3 sm:gap-4 overflow-visible">
                 <img src="/static/logo_wide.svg" alt="Party Games"
                     class="block h-10 sm:h-12 w-auto drop-shadow-[0_2px_8px_rgba(234,81,40,0.35)]">
@@ -335,7 +336,7 @@
 
             <!-- View: Lobby -->
             <div v-else-if="view === 'lobby'"
-                class="w-full max-w-4xl px-4 sm:px-0 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
+                class="w-full max-w-6xl px-4 sm:px-0 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mx-auto">
                 <!-- Room List -->
                 <div
                     class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300">
@@ -388,9 +389,10 @@
 
             <!-- View: Room (Game) -->
             <div v-else-if="view === 'room'"
-                class="room-view-container w-full max-w-6xl flex-1 flex flex-col min-h-0 container mx-auto px-0 sm:px-4">
-                <div
-                    class="room-nav-row px-4 sm:px-0 mb-2 sm:mb-4 mt-2 sm:mt-0 flex justify-between items-center shrink-0">
+                class="room-view-container w-full max-w-6xl flex-1 flex flex-col min-h-0 container mx-auto px-0 sm:px-4 transition-all duration-300"
+                :class="{ 'pt-2': isInputFocused && isMobileView }">
+                <div class="room-nav-row px-4 sm:px-0 mb-2 sm:mb-4 mt-2 sm:mt-0 flex justify-between items-center shrink-0 transition-all duration-300"
+                    :class="{ 'h-0 opacity-0 mb-0 mt-0 pointer-events-none overflow-hidden': isInputFocused && isMobileView }">
                     <button @click="leaveRoom"
                         class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2 font-bold">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -423,11 +425,12 @@
                     <!-- Main: Game Area (Canvas/Config) -->
                     <div
                         class="game-area-container order-1 lg:order-none lg:col-span-2 flex flex-col shrink-0 lg:shrink bg-white dark:bg-gray-900 sm:rounded-2xl border-0 sm:border border-gray-200 dark:border-gray-700 relative shadow-xl transition-colors duration-300 min-h-0">
-                        <div v-if="gameState === 'lobby'" class="w-full max-w-md p-4 sm:p-0 overflow-y-auto h-full">
-                            <h3 class="text-2xl font-black mb-6 text-center text-[#ea5128] uppercase tracking-wider">
+                        <div v-if="gameState === 'lobby'"
+                            class="w-full max-w-2xl px-6 py-10 overflow-y-auto h-full mx-auto">
+                            <h3 class="text-3xl font-black mb-10 text-center text-[#ea5128] uppercase tracking-wider">
                                 Settings</h3>
 
-                            <div class="space-y-6">
+                            <div class="space-y-8">
                                 <!-- Round Duration -->
                                 <div>
                                     <div class="flex justify-between mb-2">
@@ -622,10 +625,11 @@
                                 <div v-if="!amIDrawing && gameStateData.phase !== 'POST_ROUND' && gameStateData.phase !== 'GAME_OVER' && gameStateData.phase !== 'DRAWER_PREPARING'"
                                     class="guess-input-group flex gap-2">
                                     <input v-model="chatInput" @keyup.enter="sendChat" type="text"
+                                        @focus="isInputFocused = true" @blur="isInputFocused = false"
                                         :disabled="hasGuessed && gameStateData.phase === 'DRAWING'"
                                         :placeholder="hasGuessed ? 'You guessed correctly!' : 'Type a guess...'"
                                         class="flex-1 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
-                                    <button @click="sendChat"
+                                    <button @click="sendChat" @mousedown.prevent
                                         :disabled="hasGuessed && gameStateData.phase === 'DRAWING'"
                                         class="bg-[#ea5128] hover:bg-[#c1381b] text-white px-4 py-2 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50">
                                         Send
@@ -901,6 +905,8 @@
                     chatInput: '',
                     clientId: Math.random().toString(36).substr(2, 9),
                     gameState: 'lobby', // lobby, playing
+                    isInputFocused: false,
+                    isMobileView: false,
                     gameConfig: {
                         round_duration: 60,
                         points_to_win: 50,
@@ -1048,8 +1054,12 @@
                         this.fetchRooms();
                     }
                 }
+                this.checkMobile();
             },
             methods: {
+                checkMobile() {
+                    this.isMobileView = window.innerWidth < 1024; // Align with lg: grid breakpoint or sm:
+                },
                 setNickname() {
                     if (!this.nicknameInput.trim()) return;
                     this.nickname = this.nicknameInput.trim();
@@ -1305,6 +1315,7 @@
                     this.ctx.clearRect(0, 0, this.$refs.gameCanvas.width, this.$refs.gameCanvas.height);
                 },
                 handleResize() {
+                    this.checkMobile();
                     if (this.gameState === 'playing' && this.$refs.gameCanvas) {
                         this.redrawFromHistory(this.strokeHistory);
                     }
