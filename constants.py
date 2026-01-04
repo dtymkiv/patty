@@ -23,7 +23,8 @@ COLORS = [
 ]
 
 WORD_SETS = {
-    "English": [
+    "English": ["second word", "some extremely enormous phrase"],
+    "English2": [
         # Standard
         "Sun", "Moon", "Star", "Tree", "Flower", "House", "Car", "Boat", "Plane", "Train", "Bicycle", "Apple", "Banana", "Grapes", "Orange", "Cat", "Dog", "Fish", "Bird", "Snake", "Spider", "Butterfly", "Bee", "Ant", "Book", "Pen", "Pencil", "Chair", "Table", "Bed", "Sofa", "TV", "Computer", "Phone", "Clock", "Watch", "Glasses", "Hat", "Shirt", "Pants", "Shoe", "Sock", "Ball", "Bat", "Doll", "Robot", "Kite", "Balloon",
         # Animals

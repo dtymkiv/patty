@@ -237,7 +237,9 @@ class ConnectionManager:
         
         word = random.choice(all_words)
         gs["word"] = word
-        gs["current_word_obfuscated"] =  "_ " * len(word)
+        # For hints, we use underscores for letters and space for spaces. 
+        # Frontend will handle the rendering.
+        gs["current_word_obfuscated"] = "".join(["_" if c != " " else " " for c in word])
         
         # Transition to PREPARING (Manual Start)
         gs["phase"] = "DRAWER_PREPARING"
