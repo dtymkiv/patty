@@ -208,11 +208,15 @@ class ConnectionManager:
         room = self.rooms[room_id]
         gs = room["game_state"]
 
-        # Win Condition Check (End of full cycle)
-        if not gs["turn_queue"] and gs["round"] > 0:
-            max_score = room["config"]["points_to_win"]
-            leaders = [p for p in room["players"].values() if p["score"] >= max_score]
-            if leaders:
+        # Win Condition Check (End of any round)
+        if gs["round"] > 0:
+            max_score_threshold = room["config"]["points_to_win"]
+            # Check if any player reached the threshold
+            eligible_winners = [p for p in room["players"].values() if p["score"] >= max_score_threshold]
+            
+            if eligible_winners:
+                # If multiple people crossed it, the one with the highest score wins.
+                # If tied, we can just end it (the UI will show the list/leaderboard).
                 await self.end_game(room_id)
                 return
 
