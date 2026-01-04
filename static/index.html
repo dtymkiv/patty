@@ -761,6 +761,10 @@
                             class="mt-8 w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl hover:shadow-blue-500/20 transition-all active:scale-95 text-lg">
                             Play Again
                         </button>
+                        <button @click="leaveRoom"
+                            class="mt-4 w-full text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 font-bold py-2 transition-colors text-sm uppercase tracking-widest">
+                            Leave Room
+                        </button>
                     </div>
                 </div>
 
@@ -770,13 +774,23 @@
                     <div
                         class="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden transform transition-all">
                         <div
-                            class="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
-                            <div>
-                                <h2 class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-wider">
+                            class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-start gap-4 bg-gray-50 dark:bg-gray-900/50">
+                            <button @click="leaveRoom"
+                                class="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transform -scale-x-100 mt-1"
+                                title="Leave Room">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
+                            </button>
+                            <div class="flex-1">
+                                <h2
+                                    class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-wider leading-none">
                                     Next Up: <span class="text-[#ea5128]">{{ gameStateData.drawer }}</span>
                                 </h2>
                                 <p v-if="gameStateData.last_drawer"
-                                    class="text-[#ea5128] text-sm font-bold flex items-center gap-1">
+                                    class="text-[#ea5128] text-sm font-bold flex items-center gap-1 mt-1">
                                     <span class="text-gray-500 dark:text-gray-400">{{ gameStateData.last_drawer
                                         }}</span> was drawing
                                     <span
@@ -1583,6 +1597,14 @@
                         this.messages.push({ sender: "System", text: `${msg.payload.nickname} left the room.` });
                     } else if (msg.type === "CHAT") {
                         this.messages.push(msg.payload);
+
+                        // Success Notification Logic
+                        if (msg.payload.sender === 'System' && msg.payload.text.includes("guessed correctly!")) {
+                            if (!msg.payload.text.startsWith(this.nickname + ' ')) {
+                                this.showNotification(msg.payload.text, 'success');
+                            }
+                        }
+
                         this.$nextTick(() => {
                             const el = document.getElementById('chat-box');
                             if (el) el.scrollTop = el.scrollHeight;
@@ -1609,8 +1631,15 @@
                 },
                 showNotification(message, type = 'error') {
                     const id = Math.random().toString(36).substr(2, 9);
-                    this.notifications.push({ id, message, type });
-                    setTimeout(() => this.removeNotification(id), 4000);
+
+                    if (type === 'success') {
+                        this.notifications = this.notifications.filter(n => n.type !== 'success');
+                        this.notifications.push({ id, message, type });
+                        setTimeout(() => this.removeNotification(id), 1000);
+                    } else {
+                        this.notifications.push({ id, message, type });
+                        setTimeout(() => this.removeNotification(id), 4000);
+                    }
                 },
                 removeNotification(id) {
                     this.notifications = this.notifications.filter(n => n.id !== id);
