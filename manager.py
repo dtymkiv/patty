@@ -53,20 +53,26 @@ class ConnectionManager:
                 self.disconnect(room_id, client_id)
 
     def create_room(self, room_name: str, password: Optional[str] = None, game_type: str = "drawing", config: dict = None) -> str:
+        # Enforce unique room names
+        for r in self.rooms.values():
+            if r["name"].lower() == room_name.lower():
+                raise ValueError(f"Room name '{room_name}' is already taken.")
+                
         room_id = str(uuid.uuid4())[:8]
         
         # Default config if not provided
         if config is None:
+            from constants import WORD_SETS
+            default_lang = next(iter(WORD_SETS.keys()))
+            default_diff = next(iter(WORD_SETS[default_lang].keys()))
             config = {
                 "round_duration": 60,
                 "points_to_win": 50,
                 "base_points": 10,
                 "turn_order": "sequence",
-                "points_to_win": 50,
-                "base_points": 10,
-                "turn_order": "sequence",
                 "host_plays": True,
-                "word_language": "English"
+                "word_language": default_lang,
+                "word_difficulty": default_diff
             }
 
         self.rooms[room_id] = {
@@ -87,6 +93,14 @@ class ConnectionManager:
 
     def get_room(self, room_id: str):
         return self.rooms.get(room_id)
+
+    def get_word_set_metadata(self) -> dict:
+        from constants import WORD_SETS, LANGUAGE_METADATA
+        metadata = {"languages": {}, "difficulties": {}}
+        for lang, diffs in WORD_SETS.items():
+            metadata["languages"][lang] = LANGUAGE_METADATA.get(lang, lang)
+            metadata["difficulties"][lang] = list(diffs.keys())
+        return metadata
     
     def try_join_room(self, room_id: str, client_id: str, nickname: str) -> str:
         """
@@ -102,13 +116,16 @@ class ConnectionManager:
             existing = room["players"][nickname]
             if existing["connected"]:
                 return "TAKEN"
-            else:
-                # Reconnection: Update client_id to the new connection
-                existing["client_id"] = client_id
-                existing["connected"] = True
-                return "OK"
+                
+            # Reconnection: Update client_id to the new connection
+            existing["client_id"] = client_id
+            existing["connected"] = True
+            return "OK"
         else:
-            # New join
+            # New join - only allowed in lobby
+            if room["state"] != "lobby":
+                return "GAME_STARTED"
+                
             is_first = len(room["players"]) == 0
             
             from constants import COLORS
@@ -236,8 +253,17 @@ class ConnectionManager:
         from constants import WORD_SETS
         import random
         
-        language = room["config"].get("word_language", "English")
-        all_words = WORD_SETS.get(language, WORD_SETS["English"])
+        default_lang = next(iter(WORD_SETS.keys()))
+        language = room["config"].get("word_language", default_lang)
+        difficulty = room["config"].get("word_difficulty") # Will fallback below
+        
+        # Fallback logic for language
+        lang_set = WORD_SETS.get(language, WORD_SETS[default_lang])
+        # Fallback logic for difficulty
+        if not difficulty or difficulty not in lang_set:
+            difficulty = next(iter(lang_set.keys()))
+            
+        all_words = lang_set[difficulty]
         
         word = random.choice(all_words)
         gs["word"] = word

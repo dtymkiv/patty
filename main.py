@@ -23,8 +23,11 @@ async def get():
 @app.post("/api/rooms")
 async def create_room(request: CreateRoomRequest):
     config_dict = request.config.dict() if request.config else None
-    room_id = manager.create_room(request.name, request.password, request.game_type, config_dict)
-    return {"room_id": room_id, "message": "Room created"}
+    try:
+        room_id = manager.create_room(request.name, request.password, request.game_type, config_dict)
+        return {"room_id": room_id, "message": "Room created"}
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"message": str(e)})
 
 @app.get("/api/rooms")
 async def list_rooms():
@@ -37,6 +40,10 @@ async def list_rooms():
             "players_count": sum(1 for p in r_data["players"].values() if p["connected"])
         })
     return public_rooms
+
+@app.get("/api/word-sets/metadata")
+async def get_word_set_metadata():
+    return manager.get_word_set_metadata()
 
 @app.websocket("/ws/{room_id}/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str):
@@ -103,6 +110,11 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str)
                         await manager.send_to_client(room_id, client_id, {
                             "type": "ERROR",
                             "payload": {"message": "Nickname is already taken in this room."}
+                        })
+                    elif result == "GAME_STARTED":
+                         await manager.send_to_client(room_id, client_id, {
+                            "type": "ERROR",
+                            "payload": {"message": "Game has already started in this room. You can only join if you were already playing."}
                         })
                 
                 elif msg_type == "TOGGLE_READY":

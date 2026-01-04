@@ -245,38 +245,17 @@
         class="h-[100dvh] flex flex-col items-center p-0 sm:p-4 bg-gray-50 dark:bg-gray-900 transition-colors duration-300 overflow-y-auto overflow-x-hidden"
         :class="{ 'p-0': isInputFocused && isMobileView }">
         <header v-show="!(isInputFocused && isMobileView)"
-            class="w-full max-w-6xl flex justify-between items-center mb-2 sm:mb-4 mt-2 sm:mt-4 px-4 sm:px-0 shrink-0 mx-auto transition-all duration-300">
+            class="w-full max-w-6xl flex justify-between items-center mb-2 sm:mb-4 mt-2 sm:mt-4 px-4 sm:px-4 shrink-0 mx-auto transition-all duration-300">
             <div class="flex items-center gap-3 sm:gap-4 overflow-visible">
                 <img src="/static/logo_wide.svg" alt="Party Games"
                     class="block h-10 sm:h-12 w-auto drop-shadow-[0_2px_8px_rgba(234,81,40,0.35)]">
             </div>
             <div class="flex items-center gap-2 sm:gap-4">
-                <button @click="toggleTheme"
-                    class="relative inline-flex h-6 w-11 sm:h-8 sm:w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-200 dark:bg-gray-700 shadow-inner group"
-                    :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
-                    <span class="sr-only">Toggle theme</span>
-                    <span aria-hidden="true" :class="isDarkMode ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'"
-                        class="pointer-events-none flex items-center justify-center h-5 w-5 sm:h-7 sm:w-7 transform rounded-full bg-white dark:bg-gray-900 shadow-lg ring-0 transition duration-200 ease-in-out">
-                        <!-- Sun icon -->
-                        <svg v-if="!isDarkMode" xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M10 1a1 1 0 011 1v1a1 1 0 11-2 0V2a1 1 0 011-1zm4.243 1.757a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM19 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-4.757 4.243a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM10 19a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zm-4.243-1.757a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM1 10a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1zm1.757-4.243a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM10 14a4 4 0 100-8 4 4 0 000 8z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        <!-- Moon icon -->
-                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-4 sm:w-4 text-blue-400"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                    </span>
-                </button>
                 <div v-if="nickname"
                     class="text-xs sm:text-base text-gray-600 dark:text-gray-300 flex items-center gap-1.5 sm:gap-2">
                     <template v-if="isEditingNickname && view === 'lobby'">
                         <input v-model="nicknameInput" @keyup.enter="saveNickname" @keyup.esc="cancelEditingNickname"
-                            type="text"
+                            type="text" maxlength="20"
                             class="text-sm px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-[#ea5128] focus:outline-none w-32">
                         <div class="flex items-center gap-1">
                             <button @click="saveNickname" class="text-green-500 hover:text-green-600 p-0.5">
@@ -315,6 +294,27 @@
                         </div>
                     </template>
                 </div>
+                <button @click="toggleTheme"
+                    class="relative inline-flex h-6 w-11 sm:h-8 sm:w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-200 dark:bg-gray-700 shadow-inner group"
+                    :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+                    <span class="sr-only">Toggle theme</span>
+                    <span aria-hidden="true" :class="isDarkMode ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'"
+                        class="pointer-events-none flex items-center justify-center h-5 w-5 sm:h-7 sm:w-7 transform rounded-full bg-white dark:bg-gray-900 shadow-lg ring-0 transition duration-200 ease-in-out">
+                        <!-- Sun icon -->
+                        <svg v-if="!isDarkMode" xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M10 1a1 1 0 011 1v1a1 1 0 11-2 0V2a1 1 0 011-1zm4.243 1.757a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM19 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-4.757 4.243a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM10 19a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zm-4.243-1.757a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM1 10a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1zm1.757-4.243a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM10 14a4 4 0 100-8 4 4 0 000 8z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        <!-- Moon icon -->
+                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-4 sm:w-4 text-blue-400"
+                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    </span>
+                </button>
             </div>
         </header>
 
@@ -327,7 +327,7 @@
                 <h2 class="text-3xl mb-8 font-black w-full text-center text-gray-900 dark:text-gray-100">Enter Nickname
                 </h2>
                 <input v-model="nicknameInput" @keyup.enter="setNickname" type="text"
-                    placeholder="Your cool nickname..."
+                    placeholder="Your cool nickname..." maxlength="20"
                     class="w-full p-3 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ea5128] mb-4 transition-colors duration-300">
                 <button @click="setNickname"
                     class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-bold py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95">Enter
@@ -336,7 +336,7 @@
 
             <!-- View: Lobby -->
             <div v-else-if="view === 'lobby'"
-                class="w-full max-w-6xl px-4 sm:px-0 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mx-auto shrink-0 pb-8">
+                class="w-full max-w-6xl px-4 sm:px-4 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mx-auto shrink-0 pb-8">
                 <!-- Room List -->
                 <div
                     class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300">
@@ -389,10 +389,10 @@
 
             <!-- View: Room (Game) -->
             <div v-else-if="view === 'room'"
-                class="room-view-container w-full max-w-6xl flex-1 flex flex-col container mx-auto px-0 sm:px-4 transition-all duration-300 pb-8"
+                class="room-view-container w-full max-w-6xl flex-1 flex flex-col container mx-auto px-4 sm:px-4 transition-all duration-300 pb-8"
                 :class="{ 'pt-0': isInputFocused && isMobileView }">
                 <div v-show="!(isInputFocused && isMobileView)"
-                    class="room-nav-row px-4 sm:px-0 mb-2 sm:mb-4 mt-2 sm:mt-0 flex justify-between items-center shrink-0 transition-all duration-300">
+                    class="room-nav-row px-0 mb-2 sm:mb-4 mt-2 sm:mt-0 flex justify-between items-center shrink-0 transition-all duration-300">
                     <button @click="leaveRoom"
                         class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2 font-bold">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -492,17 +492,29 @@
                                     </div>
                                 </div>
 
-                                <!-- Word Language -->
-                                <div>
-                                    <label
-                                        class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-2">Word
-                                        Language</label>
-                                    <select v-model="gameConfig.word_language" @change="updateConfig"
-                                        :disabled="!amIHost"
-                                        class="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300">
-                                        <option value="English">English</option>
-                                        <option value="Ukrainian">Ukrainian</option>
-                                    </select>
+                                <!-- Word Language & Difficulty -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label
+                                            class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1.5">Language</label>
+                                        <select v-model="gameConfig.word_language" @change="updateConfig"
+                                            :disabled="!amIHost"
+                                            class="w-full p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300 text-sm">
+                                            <option v-for="(label, lang) in wordSetMetadata.languages" :key="lang"
+                                                :value="lang">{{ label }}</option>
+                                        </select>
+                                    </div>
+
+                                    <div v-if="availableDifficulties.length > 0">
+                                        <label
+                                            class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1.5">Difficulty</label>
+                                        <select v-model="gameConfig.word_difficulty" @change="updateConfig"
+                                            :disabled="!amIHost"
+                                            class="w-full p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300 text-sm">
+                                            <option v-for="d in availableDifficulties" :key="d" :value="d">{{ d }}
+                                            </option>
+                                        </select>
+                                    </div>
                                 </div>
 
                                 <!-- Host Plays -->
@@ -530,20 +542,18 @@
                             <!-- Condensed Game Header -->
                             <div
                                 class="game-info-header flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-2xl shrink-0 gap-4">
-                                <div class="flex items-center gap-3 info-item-group">
-                                    <div class="flex flex-col items-center leading-tight">
-                                        <span
-                                            class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-widest">Round</span>
-                                        <span class="font-black text-gray-700 dark:text-white">{{ gameStateData.round
-                                            }}</span>
-                                    </div>
-                                    <div class="info-separator h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
-                                    <div class="flex items-center gap-1.5 timer-display">
-                                        <span class="text-2xl font-black font-mono"
-                                            :class="timeLeft < 10 && gameStateData.phase === 'DRAWING' ? 'text-red-500' : 'text-gray-900 dark:text-white'">
-                                            {{ gameStateData.phase === 'DRAWING' ? timeLeft + 's' : '?' }}
-                                        </span>
-                                    </div>
+                                <div class="flex flex-col items-center leading-tight">
+                                    <span
+                                        class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-widest">Round</span>
+                                    <span class="font-black text-gray-700 dark:text-white">{{ gameStateData.round
+                                        }}</span>
+                                </div>
+                                <div class="info-separator h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
+                                <div class="flex items-center gap-1.5 timer-display">
+                                    <span class="text-2xl font-black font-mono"
+                                        :class="timeLeft < 10 && gameStateData.phase === 'DRAWING' ? 'text-red-500' : 'text-gray-900 dark:text-white'">
+                                        {{ gameStateData.phase === 'DRAWING' ? timeLeft + 's' : '?' }}
+                                    </span>
                                 </div>
 
                                 <div class="flex-1 text-center min-w-0 py-1">
@@ -877,6 +887,26 @@
             </div>
         </transition>
 
+        <!-- Notifications Overlay -->
+        <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
+            <transition-group name="notification">
+                <div v-for="note in notifications" :key="note.id"
+                    class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md min-w-[300px] max-w-sm"
+                    :class="note.type === 'error' ? 'bg-red-500/90 border-red-400 text-white' : 'bg-green-500/90 border-green-400 text-white'">
+                    <span v-if="note.type === 'error'" class="text-xl">⚠️</span>
+                    <span v-else class="text-xl">✅</span>
+                    <p class="font-bold text-sm">{{ note.message }}</p>
+                    <button @click="removeNotification(note.id)" class="ml-auto hover:opacity-70 transition-opacity">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </transition-group>
+        </div>
+
     </div>
 
     <script>
@@ -915,9 +945,14 @@
                         base_points: 10,
                         turn_order: 'sequence',
                         host_plays: true,
-                        word_language: 'English'
+                        word_language: '',
+                        word_difficulty: ''
                     },
                     configTimeout: null,
+                    wordSetMetadata: {
+                        languages: {},
+                        difficulties: {}
+                    },
 
                     // Game State
                     gameStateData: {
@@ -948,7 +983,8 @@
                     animatedResults: [],
                     lastTurnResults: {},
                     resultsScores: {}, // Local scoreboard for animation
-                    isDarkMode: true // Default to dark mode
+                    isDarkMode: true, // Default to dark mode
+                    notifications: []
                 }
             },
             computed: {
@@ -1005,6 +1041,11 @@
                         borderBottomWidth: `${Math.max(1, size / 8)}px`,
                         marginBottom: '1px'
                     };
+                },
+                availableDifficulties() {
+                    const lang = this.gameConfig.word_language;
+                    const diffs = this.wordSetMetadata.difficulties || {};
+                    return diffs[lang] || [];
                 }
             },
             watch: {
@@ -1013,6 +1054,16 @@
                         this.$nextTick(() => {
                             this.initCanvas();
                         });
+                    }
+                },
+                'gameConfig.word_language'(newVal) {
+                    const diffs = (this.wordSetMetadata.difficulties || {})[newVal] || [];
+                    if (diffs.length > 0 && !diffs.includes(this.gameConfig.word_difficulty)) {
+                        this.gameConfig.word_difficulty = diffs[0];
+                        this.updateConfig();
+                    } else if (diffs.length === 0) {
+                        this.gameConfig.word_difficulty = ''; // Clear difficulty if no options
+                        this.updateConfig();
                     }
                 },
                 'gameConfig.points_to_win'(newVal) {
@@ -1054,8 +1105,32 @@
                     }
                 }
                 this.checkMobile();
+                this.fetchWordSetMetadata();
             },
             methods: {
+                fetchWordSetMetadata() {
+                    fetch('/api/word-sets/metadata')
+                        .then(r => r.json())
+                        .then(data => {
+                            this.wordSetMetadata = data;
+
+                            // Initialize defaults if not set or invalid
+                            const languages = data.languages || {};
+                            const difficulties = data.difficulties || {};
+
+                            if (Object.keys(languages).length > 0) {
+                                if (!this.gameConfig.word_language || !languages[this.gameConfig.word_language]) {
+                                    this.gameConfig.word_language = Object.keys(languages)[0];
+                                }
+
+                                const lang = this.gameConfig.word_language;
+                                const diffs = difficulties[lang] || [];
+                                if (!this.gameConfig.word_difficulty || !diffs.includes(this.gameConfig.word_difficulty)) {
+                                    this.gameConfig.word_difficulty = diffs[0] || '';
+                                }
+                            }
+                        });
+                },
                 checkMobile() {
                     this.isMobileView = window.innerWidth < 1024; // Align with lg: grid breakpoint or sm:
                 },
@@ -1114,6 +1189,10 @@
                             })
                         });
                         const data = await res.json();
+                        if (!res.ok) {
+                            this.showNotification(data.message || "Failed to create room");
+                            return;
+                        }
                         this.joinRoom(data.room_id);
                     } catch (e) { console.error("Failed to create room", e); }
                 },
@@ -1509,8 +1588,8 @@
                             if (el) el.scrollTop = el.scrollHeight;
                         });
                     } else if (msg.type === "ERROR") {
-                        alert(msg.payload.message);
-                        if (msg.payload.message.includes("taken")) {
+                        this.showNotification(msg.payload.message);
+                        if (msg.payload.message.includes("taken") || msg.payload.message.includes("started")) {
                             this.leaveRoom();
                         }
                     }
@@ -1527,6 +1606,14 @@
                         payload: { text: this.chatInput }
                     }));
                     this.chatInput = '';
+                },
+                showNotification(message, type = 'error') {
+                    const id = Math.random().toString(36).substr(2, 9);
+                    this.notifications.push({ id, message, type });
+                    setTimeout(() => this.removeNotification(id), 4000);
+                },
+                removeNotification(id) {
+                    this.notifications = this.notifications.filter(n => n.id !== id);
                 }
             }
         }).mount('#app')
@@ -1556,6 +1643,22 @@
         /* Results List Reordering Animation */
         .results-list-move {
             transition: transform 0.8s ease;
+        }
+
+        /* Notification Animations */
+        .notification-enter-active,
+        .notification-leave-active {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .notification-enter-from {
+            opacity: 0;
+            transform: translateX(100%) scale(0.9);
+        }
+
+        .notification-leave-to {
+            opacity: 0;
+            transform: translateX(10%) scale(0.9);
         }
     </style>
 </body>
