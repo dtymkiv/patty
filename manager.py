@@ -329,6 +329,50 @@ class ConnectionManager:
                       }
                   })
 
+    async def send_full_state_to_client(self, room_id: str, client_id: str, nickname: str):
+        """Sends both GAME_STATE_UPDATE and STROKE_HISTORY_UPDATE to a single client."""
+        room = self.rooms.get(room_id)
+        if not room: return
+        gs = room.get("game_state")
+        if not gs: return
+
+        import time
+        public_gs = {
+            "round": gs.get("round", 1),
+            "drawer": gs["drawer"],
+            "phase": gs["phase"],
+            "timer_end": gs["timer_end"],
+            "time_left": max(0, gs["timer_end"] - time.time()) if gs["timer_end"] > 0 else 0,
+            "word": gs["word"] if gs["phase"] in ["DRAWER_PREPARING", "GAME_OVER"] else None,
+            "word_hints": gs["current_word_obfuscated"],
+            "correct_guessers": gs.get("correct_guessers", []),
+            "last_drawer": gs.get("last_drawer"),
+            "last_word": gs.get("last_word"),
+            "first_guesser_nickname": gs.get("first_guesser_nickname")
+        }
+
+        is_drawer = (nickname == gs["drawer"])
+        view_gs = public_gs.copy()
+        if is_drawer and gs["phase"] in ["DRAWING", "DRAWER_PREPARING"]:
+            view_gs["word"] = gs["word"]
+
+        # 1. Send State
+        await self.send_to_client(room_id, client_id, {
+            "type": "GAME_STATE_UPDATE",
+            "payload": {
+                "game_state": view_gs,
+                "scores": {n: pl["score"] for n, pl in room["players"].items()},
+                "turn_results": gs.get("turn_results", {})
+            }
+        })
+
+        # 2. Send History
+        if "stroke_history" in gs:
+            await self.send_to_client(room_id, client_id, {
+                "type": "STROKE_HISTORY_UPDATE",
+                "payload": {"history": gs["stroke_history"]}
+            })
+
     async def process_chat_message(self, room_id: str, nickname: str, text: str):
         room = self.rooms[room_id]
         gs = room.get("game_state")
@@ -412,15 +456,24 @@ class ConnectionManager:
     async def record_stroke(self, room_id: str, nickname: str, stroke: dict):
         if not self.is_drawer(room_id, nickname): return
         gs = self.rooms[room_id]["game_state"]
-        if gs["phase"] != "DRAWING": return
+        if gs["phase"] not in ["DRAWING", "DRAWER_PREPARING"]: return
         gs["stroke_history"].append(stroke)
 
     async def undo_stroke(self, room_id: str, nickname: str):
         if not self.is_drawer(room_id, nickname): return
         gs = self.rooms[room_id]["game_state"]
-        if gs["phase"] != "DRAWING": return
+        if gs["phase"] not in ["DRAWING", "DRAWER_PREPARING"]: return
         if gs["stroke_history"]:
-            gs["stroke_history"].pop()
+            last_stroke = gs["stroke_history"][-1]
+            action_id = last_stroke.get("actionId")
+            
+            if action_id:
+                # Remove all strokes with the same actionId
+                gs["stroke_history"] = [s for s in gs["stroke_history"] if s.get("actionId") != action_id]
+            else:
+                # Fallback for old/legacy strokes
+                gs["stroke_history"].pop()
+
             # Broadcast the full history update
             await self.broadcast(room_id, {
                 "type": "STROKE_HISTORY_UPDATE",

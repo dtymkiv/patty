@@ -95,6 +95,10 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str)
                                 "total_players": len(player_list)
                             }
                         })
+
+                        # Sync state for the newly joined/reconnected player
+                        if room.get("state") == "playing":
+                            await manager.send_full_state_to_client(room_id, client_id, nickname)
                     elif result == "TAKEN":
                         await manager.send_to_client(room_id, client_id, {
                             "type": "ERROR",
