@@ -661,7 +661,7 @@
                                         :disabled="hasGuessed && gameStateData.phase === 'DRAWING'"
                                         :placeholder="hasGuessed ? 'You guessed correctly!' : 'Type a guess...'"
                                         class="flex-1 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
-                                    <button @click="sendChat" @mousedown.prevent
+                                    <button v-if="!isMobileView" @click="sendChat" @mousedown.prevent
                                         :disabled="hasGuessed && gameStateData.phase === 'DRAWING'"
                                         class="bg-[#ea5128] hover:bg-[#c1381b] text-white px-4 py-2 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50">
                                         Send
@@ -683,13 +683,13 @@
                         <div class="flex flex-col lg:flex-row gap-2 sm:gap-4 flex-1 min-h-0">
                             <!-- Sidebar: Chat -->
                             <div
-                                class="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col min-h-[200px] lg:min-h-0 flex-1 border border-gray-200 dark:border-gray-700 shadow-xl transition-colors duration-300 mt-2 sm:mt-0 mx-2 sm:mx-0">
+                                class="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col h-[100px] lg:h-auto lg:min-h-0 flex-none lg:flex-1 border border-gray-200 dark:border-gray-700 shadow-xl transition-colors duration-300 mt-2 sm:mt-0 mx-2 sm:mx-0">
                                 <h3
                                     class="font-black mb-1 sm:mb-3 text-gray-400 dark:text-gray-500 uppercase text-[10px] tracking-widest shrink-0">
                                     Chat</h3>
                                 <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900/50 rounded-xl p-2 mb-0 space-y-1.5 border border-gray-100 dark:border-transparent shadow-inner"
                                     id="chat-box">
-                                    <div v-for="(msg, i) in messages" :key="i" class="text-sm">
+                                    <div v-for="(msg, i) in displayedMessages" :key="i" class="text-sm">
                                         <span :style="{color: msg.color}" class="font-black">{{ msg.sender
                                             }}:</span>
                                         <span class="text-gray-700 dark:text-gray-200 ml-1 font-medium">{{ msg.text
@@ -895,11 +895,11 @@
                                         <div
                                             class="relative h-4 w-full bg-gray-200 dark:bg-gray-900 rounded-full overflow-hidden flex shadow-inner">
                                             <!-- Base Score Segment -->
-                                            <div class="h-full bg-[#ea5128]/60 transition-all duration-1000 ease-out"
+                                            <div class="h-full bg-[#ea5128]/60 transition-all duration-500 ease-out"
                                                 :style="{ width: getBaseScorePercentage(res.nickname) + '%' }">
                                             </div>
                                             <!-- New Points Segment -->
-                                            <div class="h-full bg-[#ea5128] transition-all duration-1000 ease-out fill-animation border-l border-white/20"
+                                            <div class="h-full bg-[#ea5128] transition-all duration-500 ease-out fill-animation border-l border-white/20"
                                                 :style="{ width: getNewPointsPercentage(res.nickname) + '%' }">
                                             </div>
                                         </div>
@@ -1213,6 +1213,12 @@
                     const lang = this.gameConfig.word_language;
                     const diffs = this.wordSetMetadata.difficulties || {};
                     return diffs[lang] || [];
+                },
+                displayedMessages() {
+                    if (this.isMobileView) {
+                        return this.messages.slice(-3);
+                    }
+                    return this.messages;
                 }
             },
             watch: {
@@ -1807,11 +1813,13 @@
                     });
 
                     this.animatedResults = [];
-                    const sortedNicks = Object.keys(results).sort((a, b) => {
+                    const sortedNicks = players.map(p => p.nickname).sort((a, b) => {
+                        const resA = results[a] || { points: 0, time: 999 };
+                        const resB = results[b] || { points: 0, time: 999 };
                         // Guessers first by time, then drawer
                         if (a === this.gameStateData.drawer) return 1;
                         if (b === this.gameStateData.drawer) return -1;
-                        return results[a].time - results[b].time;
+                        return resA.time - resB.time;
                     });
 
                     let i = 0;
@@ -1828,16 +1836,17 @@
                                 });
                                 // Also re-sort main sidebar leaderboard
                                 this.players.sort((a, b) => b.score - a.score);
-                            }, 1000);
+                            }, 500);
                             return;
                         }
                         const nick = sortedNicks[i];
                         this.animatedResults.push({
                             nickname: nick,
-                            ...results[nick]
+                            points: results[nick]?.points || 0,
+                            time: results[nick]?.time || 0
                         });
                         i++;
-                    }, 800);
+                    }, 400);
                 },
                 getPlayerColor(nickname) {
                     const p = this.players.find(p => p.nickname === nickname);
@@ -2060,12 +2069,12 @@
 
         .fill-animation {
             width: 0%;
-            transition: width 1s ease-out;
+            transition: width 0.5s ease-out;
         }
 
         /* Results List Reordering Animation */
         .results-list-move {
-            transition: transform 0.8s ease;
+            transition: transform 0.4s ease;
         }
 
         /* Notification Animations */
