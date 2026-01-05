@@ -596,7 +596,8 @@
                             </div>
 
                             <!-- Canvas Area -->
-                            <div class="canvas-side-container w-full flex-1 relative bg-white dark:bg-white rounded-b-xl shadow-inner overflow-hidden min-h-0 flex items-center justify-center p-0 sm:p-2"
+                            <div class="canvas-side-container w-full flex-1 relative bg-white dark:bg-white rounded-b-xl shadow-inner overflow-hidden min-h-0 flex items-center justify-center p-0 sm:p-2 transition-all duration-300 border-4"
+                                :class="{ 'shake-error border-red-500': isShaking, 'success-border border-green-500': hasGuessed, 'border-transparent': !isShaking && !hasGuessed }"
                                 id="canvas-container">
                                 <canvas ref="gameCanvas"
                                     class="w-full max-h-full block cursor-crosshair touch-none h-auto"
@@ -998,7 +999,10 @@
                     lastTurnResults: {},
                     resultsScores: {}, // Local scoreboard for animation
                     isDarkMode: true, // Default to dark mode
-                    notifications: []
+                    resultsScores: {}, // Local scoreboard for animation
+                    isDarkMode: true, // Default to dark mode
+                    notifications: [],
+                    isShaking: false
                 }
             },
             computed: {
@@ -1609,6 +1613,12 @@
                             const el = document.getElementById('chat-box');
                             if (el) el.scrollTop = el.scrollHeight;
                         });
+
+                        // Visual Feedback for Incorrect Guess (My guess)
+                        if (msg.payload.sender === this.nickname && msg.payload.text === "guessed incorrectly") {
+                            this.isShaking = true;
+                            setTimeout(() => this.isShaking = false, 500);
+                        }
                     } else if (msg.type === "ERROR") {
                         this.showNotification(msg.payload.message);
                         if (msg.payload.message.includes("taken") || msg.payload.message.includes("started")) {
@@ -1688,6 +1698,38 @@
         .notification-leave-to {
             opacity: 0;
             transform: translateX(10%) scale(0.9);
+        }
+
+        /* Shake Animation */
+        @keyframes shake {
+
+            0%,
+            100% {
+                transform: translateX(0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translateX(-5px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translateX(5px);
+            }
+        }
+
+        .shake-error {
+            animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        .success-border {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
         }
     </style>
 </body>
