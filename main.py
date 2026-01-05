@@ -15,6 +15,15 @@ app = FastAPI()
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+@app.on_event("startup")
+async def startup_event():
+    import asyncio
+    async def cleanup_loop():
+        while True:
+            await asyncio.sleep(60) # Every minute
+            manager.cleanup_empty_rooms()
+    asyncio.create_task(cleanup_loop())
+
 @app.get("/")
 async def get():
     # Return index.html as a static file to avoid Jinja2 template parsing of Vue.js delimiters
@@ -65,7 +74,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str)
                 
                 if msg_type == "JOIN":
                     nickname = msg.get("payload", {}).get("nickname", "Anonymous")
-                    result = manager.try_join_room(room_id, client_id, nickname)
+                    password = msg.get("payload", {}).get("password")
+                    token = msg.get("payload", {}).get("token")
+                    result = manager.try_join_room(room_id, client_id, nickname, password, token)
                     
                     if result == "OK":
                         current_nickname = nickname
@@ -73,13 +84,14 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str)
                         # Send Success to self
                         player_list = []
                         for n, p in room["players"].items():
-                            if p["connected"]:
-                                player_list.append({
-                                    "nickname": n,
-                                    "is_host": p["is_host"],
-                                    "is_ready": p.get("is_ready", False),
-                                    "color": p.get("color", "#FFFFFF")
-                                })
+                            player_list.append({
+                                "nickname": n,
+                                "is_host": p["is_host"],
+                                "is_ready": p.get("is_ready", False),
+                                "color": p.get("color", "#FFFFFF"),
+                                "connected": p.get("connected", True),
+                                "score": p.get("score", 0)
+                            })
                         
                         await manager.send_to_client(room_id, client_id, {
                             "type": "JOIN_SUCCESS",
@@ -88,7 +100,8 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str)
                                 "players": player_list,
                                 "state": room["state"],
                                 "game_type": room["game_type"],
-                                "config": room["config"]
+                                "config": room["config"],
+                                "room_token": room.get("room_token")
                             }
                         })
 
@@ -99,6 +112,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str)
                                 "nickname": nickname,
                                 "is_ready": False,
                                 "color": room["players"][nickname].get("color", "#FFFFFF"),
+                                "connected": room["players"][nickname].get("connected", True),
                                 "total_players": len(player_list)
                             }
                         })
@@ -115,6 +129,11 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str)
                          await manager.send_to_client(room_id, client_id, {
                             "type": "ERROR",
                             "payload": {"message": "Game has already started in this room. You can only join if you were already playing."}
+                        })
+                    elif result == "WRONG_PASSWORD":
+                         await manager.send_to_client(room_id, client_id, {
+                            "type": "ERROR",
+                            "payload": {"message": "Incorrect password"}
                         })
                 
                 elif msg_type == "TOGGLE_READY":
@@ -175,6 +194,32 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str)
                 elif msg_type == "CLEAR_CANVAS":
                     if current_nickname:
                         await manager.clear_canvas_history(room_id, current_nickname)
+
+                elif msg_type == "LEAVE_ROOM":
+                    # Explicit leave
+                    if current_nickname:
+                        # If host, close room
+                        if room["players"][current_nickname]["is_host"]:
+                            await manager.close_room(room_id)
+                            # Close logic closes sockets, so loop will break or we should break here? 
+                            # Connection closed exception will be raised or we break.
+                            break
+                        else:
+                            # Just remove player? Or let them disconnect normally?
+                            # Standard leave behavior is just disconnect usually, but we want to free the nickname perhaps?
+                            # For now, let's treat it as a disconnect but maybe explicit remove from players dict?
+                            # If we remove strictly, reconnect won't work. 
+                            # If they explicitly clicked "Leave", they probably don't want to reconnect to the same state.
+                            # So removing is correct.
+                            await manager.broadcast(room_id, {
+                                "type": "PLAYER_LEFT",
+                                "payload": {"nickname": current_nickname}
+                            })
+                            manager.remove_player_from_room(room_id, current_nickname)
+                            # Close socket
+                            await websocket.close()
+                            # Break loop
+                            break
                 
             except json.JSONDecodeError:
                 pass

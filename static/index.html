@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Party Games Service</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/unique-names-generator@4.7.1/dist/index.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -326,9 +328,20 @@
                     class="h-24 w-auto mb-8 drop-shadow-[0_8px_20px_rgba(234,81,40,0.25)] animate-pulse-subtle">
                 <h2 class="text-3xl mb-8 font-black w-full text-center text-gray-900 dark:text-gray-100">Enter Nickname
                 </h2>
-                <input v-model="nicknameInput" @keyup.enter="setNickname" type="text"
-                    placeholder="Your cool nickname..." maxlength="20"
-                    class="w-full p-3 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ea5128] mb-4 transition-colors duration-300">
+                <div class="w-full mb-4">
+                    <input v-model="nicknameInput" @keyup.enter="setNickname" type="text"
+                        placeholder="Your cool nickname..." maxlength="20"
+                        class="w-full p-3 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300">
+                    <button @click="generateRandomName" type="button"
+                        class="w-full mt-2 text-sm text-gray-500 dark:text-gray-400 hover:text-[#ea5128] dark:hover:text-[#ea5128] font-bold transition-colors flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd"
+                                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Generate random name
+                    </button>
+                </div>
                 <button @click="setNickname"
                     class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-bold py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95">Enter
                     Lobby</button>
@@ -393,25 +406,34 @@
                 :class="{ 'pt-0': isInputFocused && isMobileView }">
                 <div v-show="!(isInputFocused && isMobileView)"
                     class="room-nav-row px-0 mb-2 sm:mb-4 mt-2 sm:mt-0 flex justify-between items-center shrink-0 transition-all duration-300">
-                    <button @click="leaveRoom"
-                        class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-2 font-bold">
+                    <button @click="handleLeaveRequest"
+                        class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1 sm:gap-2 font-bold whitespace-nowrap">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd"
                                 d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
                                 clip-rule="evenodd" />
                         </svg>
-                        Leave Room
+                        <span class="text-sm sm:text-base">Leave</span>
+                        <span class="hidden xs:inline text-sm sm:text-base">Room</span>
                     </button>
-                    <div class="flex gap-4">
-                        <div v-if="gameState === 'lobby'" class="flex gap-4">
+                    <div class="flex gap-2 sm:gap-4">
+                        <div v-if="gameState === 'lobby'" class="flex gap-2 sm:gap-4">
+                            <button @click="openInviteModal"
+                                class="bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 px-3 sm:px-6 py-2 rounded-xl font-black text-white transition-all shadow-md active:scale-95 whitespace-nowrap text-sm sm:text-base flex items-center gap-1.5 sm:gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 sm:h-5 sm:w-5"
+                                    viewBox="0 0 20 20" fill="currentColor">
+                                    <path
+                                        d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+                                </svg>
+                            </button>
                             <button @click="toggleReady"
                                 :class="amIReady ? 'bg-gray-400 dark:bg-gray-600 hover:bg-gray-500' : 'bg-[#ea5128] hover:bg-[#c1381b]'"
-                                class="px-6 py-2 rounded-xl font-black text-white transition-all shadow-md active:scale-95">
+                                class="px-3 sm:px-6 py-2 rounded-xl font-black text-white transition-all shadow-md active:scale-95 whitespace-nowrap text-sm sm:text-base">
                                 {{ amIReady ? 'Unready' : 'Ready' }}
                             </button>
                             <button v-if="amIHost" @click="startGame" :disabled="!canStart"
                                 :class="canStart ? 'bg-yellow-500 hover:bg-yellow-400 text-black' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'"
-                                class="px-6 py-2 rounded-xl font-black transition-all shadow-md">
+                                class="px-3 sm:px-6 py-2 rounded-xl font-black transition-all shadow-md whitespace-nowrap text-sm sm:text-base">
                                 Start Game
                             </button>
                         </div>
@@ -684,7 +706,8 @@
                                     Players ({{ players.length }})</h3>
                                 <ul class="space-y-1.5 overflow-y-auto flex-1 pr-1">
                                     <li v-for="p in players" :key="p.nickname"
-                                        class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded-xl transition-colors duration-300">
+                                        class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded-xl transition-colors duration-300"
+                                        :class="{'opacity-60': gameState === 'playing' && !p.connected}">
                                         <div class="flex items-center gap-2">
                                             <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white relative shadow-md"
                                                 :style="{backgroundColor: p.color}">
@@ -693,13 +716,18 @@
                                                     class="absolute -top-1 -right-1 text-xs">👑</span>
                                             </div>
                                             <span class="truncate max-w-[100px] font-bold" :style="{color: p.color}">{{
-                                                p.nickname
-                                                }}</span>
+                                                p.nickname }}</span>
                                         </div>
+
                                         <div class="flex items-center gap-2">
                                             <span class="text-sm font-black text-yellow-500">{{ p.score || 0
                                                 }}</span>
-                                            <span v-if="p.is_ready" class="text-green-500 text-xl">✓</span>
+                                            <!-- Show ready checkmark only in lobby -->
+                                            <span v-if="gameState === 'lobby' && p.is_ready"
+                                                class="text-green-500 text-xl">✓</span>
+                                            <!-- Show disconnected status during game -->
+                                            <span v-if="gameState === 'playing' && !p.connected"
+                                                class="text-red-500 text-xs font-bold uppercase tracking-wider">⚠️</span>
                                         </div>
                                     </li>
                                 </ul>
@@ -707,6 +735,42 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Leave Modal -->
+                <div v-if="showLeaveModal"
+                    class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md">
+                    <div
+                        class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-slide-in border border-gray-100 dark:border-gray-700 text-center">
+                        <div class="mb-4 text-red-500 dark:text-red-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">End
+                            the Game?</h3>
+                        <p class="text-gray-600 dark:text-gray-300 mb-8 font-medium">
+                            You are the host. leaving will <span class="text-red-500 dark:text-red-400 font-bold">close
+                                the room</span> for everyone.
+                        </p>
+                        <div class="flex flex-col space-y-3">
+                            <button @click="confirmHostLeave"
+                                class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl shadow-lg hover:shadow-red-500/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
+                                Close Room
+                            </button>
+                            <button @click="showLeaveModal = false"
+                                class="w-full py-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 font-bold rounded-xl transition-colors uppercase tracking-widest text-sm">
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Password Modal -->
+
+
+
 
                 <!-- Overlay: Round End / Game Over (Fixed Full-Screen) -->
                 <div v-if="gameStateData.phase === 'POST_ROUND' || gameStateData.phase === 'GAME_OVER'"
@@ -762,7 +826,7 @@
                             class="mt-8 w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl hover:shadow-blue-500/20 transition-all active:scale-95 text-lg">
                             Play Again
                         </button>
-                        <button @click="leaveRoom"
+                        <button @click="handleLeaveRequest"
                             class="mt-4 w-full text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 font-bold py-2 transition-colors text-sm uppercase tracking-widest">
                             Leave Room
                         </button>
@@ -776,7 +840,7 @@
                         class="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden transform transition-all">
                         <div
                             class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-start gap-4 bg-gray-50 dark:bg-gray-900/50">
-                            <button @click="leaveRoom"
+                            <button @click="handleLeaveRequest"
                                 class="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transform -scale-x-100 mt-1"
                                 title="Leave Room">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
@@ -902,13 +966,90 @@
             </div>
         </transition>
 
+        <!-- Password Modal -->
+        <div v-if="showPasswordModal"
+            class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-slide-in border border-gray-100 dark:border-gray-700 text-center">
+                <div class="mb-4 text-[#ea5128]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">Room
+                    Locked</h3>
+                <p class="text-gray-600 dark:text-gray-300 mb-6 font-medium">
+                    Please enter the password to join this room.
+                </p>
+                <input id="join-password-input" v-model="joinPassword" type="password" @keyup.enter="submitPassword"
+                    placeholder="Password"
+                    class="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white mb-6 border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300 text-center font-bold">
+                <div class="flex flex-col space-y-3">
+                    <button @click="submitPassword"
+                        class="w-full py-3 bg-[#ea5128] hover:bg-[#c1381b] text-white font-black rounded-xl shadow-lg hover:shadow-[#ea5128]/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
+                        Join Room
+                    </button>
+                    <button @click="cancelPasswordJoin"
+                        class="w-full py-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 font-bold rounded-xl transition-colors uppercase tracking-widest text-sm">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invite Modal -->
+        <div v-if="showInviteModal"
+            class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-md w-full animate-slide-in border border-gray-100 dark:border-gray-700 text-center">
+                <div class="mb-4 text-blue-500 dark:text-blue-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">Invite
+                    Friends</h3>
+                <p class="text-gray-600 dark:text-gray-300 mb-6 font-medium">
+                    Share this link or QR code to invite players
+                </p>
+
+                <!-- QR Code Container -->
+                <div class="mb-6 flex justify-center">
+                    <div id="qrcode-container" class="bg-white p-4 rounded-xl shadow-inner"></div>
+                </div>
+
+                <!-- Invite Link -->
+                <div class="mb-6">
+                    <input v-model="inviteLink" readonly type="text"
+                        class="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors duration-300 text-center font-mono text-sm"
+                        @click="$event.target.select()">
+                </div>
+
+                <div class="flex flex-col space-y-3">
+                    <button @click="copyInviteLink"
+                        class="w-full py-3 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-black rounded-xl shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
+                        {{ linkCopied ? '✓ Copied!' : 'Copy Link' }}
+                    </button>
+                    <button @click="closeInviteModal"
+                        class="w-full py-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 font-bold rounded-xl transition-colors uppercase tracking-widest text-sm">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Notifications Overlay -->
         <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
             <transition-group name="notification">
                 <div v-for="note in notifications" :key="note.id"
                     class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md min-w-[300px] max-w-sm"
-                    :class="note.type === 'error' ? 'bg-red-500/90 border-red-400 text-white' : 'bg-green-500/90 border-green-400 text-white'">
+                    :class="note.type === 'error' ? 'bg-red-500/90 border-red-400 text-white' : note.type === 'warning' ? 'bg-orange-500/90 border-orange-400 text-white' : 'bg-green-500/90 border-green-400 text-white'">
                     <span v-if="note.type === 'error'" class="text-xl">⚠️</span>
+                    <span v-else-if="note.type === 'warning'" class="text-xl">🔌</span>
                     <span v-else class="text-xl">✅</span>
                     <p class="font-bold text-sm">{{ note.message }}</p>
                     <button @click="removeNotification(note.id)" class="ml-auto hover:opacity-70 transition-opacity">
@@ -943,6 +1084,9 @@
 
                     // Room / Game
                     currentRoomId: null,
+                    joinPassword: '',
+                    showPasswordModal: false,
+                    roomToken: null,
                     socket: null,
                     players: [],
                     messages: [],
@@ -1002,7 +1146,12 @@
                     resultsScores: {}, // Local scoreboard for animation
                     isDarkMode: true, // Default to dark mode
                     notifications: [],
-                    isShaking: false
+                    isShaking: false,
+                    showLeaveModal: false,
+                    showInviteModal: false,
+                    inviteLink: '',
+                    linkCopied: false,
+                    pendingRoomJoin: null // {roomId, token} from URL params
                 }
             },
             computed: {
@@ -1100,8 +1249,22 @@
             },
             mounted() {
                 window.addEventListener('resize', this.handleResize);
+
+                // Check for invite link parameters
+                const urlParams = new URLSearchParams(window.location.search);
+                const roomParam = urlParams.get('room');
+                const tokenParam = urlParams.get('token');
+
+                if (roomParam && tokenParam) {
+                    // Store pending room join
+                    this.pendingRoomJoin = { roomId: roomParam, token: tokenParam };
+                    // Clear URL parameters
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+
                 const savedNick = localStorage.getItem('nickname');
                 const savedRoom = localStorage.getItem('roomId');
+                const savedToken = localStorage.getItem('roomToken');
                 const savedTheme = localStorage.getItem('theme');
                 if (savedTheme) {
                     this.isDarkMode = savedTheme === 'dark';
@@ -1113,14 +1276,31 @@
 
                 if (savedNick) {
                     this.nickname = savedNick;
-                    if (savedRoom) {
+
+                    // If we have a pending invite join, use that instead of saved room
+                    if (this.pendingRoomJoin) {
+                        this.currentRoomId = this.pendingRoomJoin.roomId;
+                        this.roomToken = this.pendingRoomJoin.token;
+                        localStorage.setItem('roomId', this.currentRoomId);
+                        localStorage.setItem('roomToken', this.roomToken);
+                        this.view = 'room';
+                        this.connectWebSocket();
+                        this.pendingRoomJoin = null;
+                    } else if (savedRoom) {
                         this.view = 'room';
                         this.currentRoomId = savedRoom;
+                        if (savedToken) {
+                            this.roomToken = savedToken;
+                        }
                         this.connectWebSocket();
                     } else {
                         this.view = 'lobby';
                         this.fetchRooms();
                     }
+                } else if (this.pendingRoomJoin) {
+                    // User doesn't have a nickname but has invite link - stay on login screen
+                    // After they enter nickname, we'll join the room
+                    this.view = 'login';
                 }
                 this.checkMobile();
                 this.fetchWordSetMetadata();
@@ -1165,12 +1345,52 @@
                 handleInputBlur() {
                     this.isInputFocused = false;
                 },
+                generateRandomName() {
+                    // Check if unique-names-generator is available
+                    if (typeof window.uniqueNamesGenerator !== 'undefined') {
+                        const { uniqueNamesGenerator: generate, adjectives, animals } = window.uniqueNamesGenerator;
+                        let randomName = '';
+                        let attempts = 0;
+
+                        // Try to get a name within 20 chars, max 5 attempts
+                        do {
+                            randomName = generate({
+                                dictionaries: [adjectives, animals],
+                                separator: '-',
+                                length: 2,
+                                style: 'lowerCase'
+                            });
+                            attempts++;
+                        } while (randomName.length > 20 && attempts < 5);
+
+                        this.nicknameInput = randomName.slice(0, 20);
+                    } else {
+                        // Fallback if library doesn't load
+                        const adjectives = ['happy', 'silly', 'brave', 'clever', 'swift', 'mighty', 'gentle', 'wild'];
+                        const nouns = ['panda', 'tiger', 'eagle', 'dolphin', 'fox', 'wolf', 'bear', 'owl'];
+                        const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
+                        const noun = nouns[Math.floor(Math.random() * nouns.length)];
+                        this.nicknameInput = `${adj}-${noun}`.slice(0, 20);
+                    }
+                },
                 setNickname() {
                     if (!this.nicknameInput.trim()) return;
                     this.nickname = this.nicknameInput.trim();
                     localStorage.setItem('nickname', this.nickname);
-                    this.view = 'lobby';
-                    this.fetchRooms();
+
+                    // Check if user came from invite link
+                    if (this.pendingRoomJoin) {
+                        this.currentRoomId = this.pendingRoomJoin.roomId;
+                        this.roomToken = this.pendingRoomJoin.token;
+                        localStorage.setItem('roomId', this.currentRoomId);
+                        localStorage.setItem('roomToken', this.roomToken);
+                        this.view = 'room';
+                        this.connectWebSocket();
+                        this.pendingRoomJoin = null;
+                    } else {
+                        this.view = 'lobby';
+                        this.fetchRooms();
+                    }
                 },
                 startEditingNickname() {
                     this.nicknameInput = this.nickname;
@@ -1211,27 +1431,142 @@
                             this.showNotification(data.message || "Failed to create room");
                             return;
                         }
-                        this.joinRoom(data.room_id);
+                        // Auto-join the created room
+                        // Pass the used password to joinPassword so WS connection can use it
+                        this.joinPassword = this.newRoomPassword;
+                        this.proceedToJoin(data.room_id);
+
+                        // Clear creation inputs
+                        this.newRoomName = '';
+                        this.newRoomPassword = '';
                     } catch (e) { console.error("Failed to create room", e); }
                 },
                 joinRoom(roomId) {
+                    // Check if room needs password
+                    const room = this.rooms.find(r => r.id === roomId);
+                    if (room && room.has_password) {
+                        this.currentRoomId = roomId;
+                        this.joinPassword = '';
+                        this.showPasswordModal = true;
+                        // Focus input next tick
+                        this.$nextTick(() => {
+                            const input = document.getElementById('join-password-input');
+                            if (input) input.focus();
+                        });
+                        return;
+                    }
+                    this.proceedToJoin(roomId);
+                },
+                submitPassword() {
+                    this.showPasswordModal = false;
+                    this.proceedToJoin(this.currentRoomId);
+                },
+                cancelPasswordJoin() {
+                    this.showPasswordModal = false;
+                    this.currentRoomId = null;
+                    this.joinPassword = '';
+                },
+                proceedToJoin(roomId) {
                     this.currentRoomId = roomId;
                     localStorage.setItem('roomId', roomId);
+                    // Do NOT save password here. 
+                    // Wait for JOIN_SUCCESS to save token.
                     this.view = 'room';
                     this.connectWebSocket();
                 },
+                handleLeaveRequest() {
+                    if (this.amIHost) {
+                        this.showLeaveModal = true;
+                    } else {
+                        this.leaveRoom();
+                    }
+                },
+                confirmHostLeave() {
+                    this.showLeaveModal = false;
+                    this.leaveRoom();
+                },
+                openInviteModal() {
+                    if (!this.currentRoomId || !this.roomToken) {
+                        this.showNotification('Unable to generate invite link', 'error');
+                        return;
+                    }
+
+                    // Generate invite link
+                    const baseUrl = window.location.origin;
+                    this.inviteLink = `${baseUrl}/?room=${this.currentRoomId}&token=${this.roomToken}`;
+                    this.linkCopied = false;
+                    this.showInviteModal = true;
+
+                    // Generate QR code after modal is rendered
+                    this.$nextTick(() => {
+                        this.generateQRCode();
+                    });
+                },
+                generateQRCode() {
+                    const container = document.getElementById('qrcode-container');
+                    if (container && typeof QRCode !== 'undefined') {
+                        // Clear previous QR code
+                        container.innerHTML = '';
+
+                        // Generate new QR code
+                        new QRCode(container, {
+                            text: this.inviteLink,
+                            width: 256,
+                            height: 256,
+                            colorDark: '#000000',
+                            colorLight: '#ffffff',
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    }
+                },
+                async copyInviteLink() {
+                    try {
+                        await navigator.clipboard.writeText(this.inviteLink);
+                        this.linkCopied = true;
+                        setTimeout(() => {
+                            this.linkCopied = false;
+                        }, 2000);
+                    } catch (err) {
+                        // Fallback for older browsers
+                        const input = document.createElement('input');
+                        input.value = this.inviteLink;
+                        document.body.appendChild(input);
+                        input.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(input);
+                        this.linkCopied = true;
+                        setTimeout(() => {
+                            this.linkCopied = false;
+                        }, 2000);
+                    }
+                },
+                closeInviteModal() {
+                    this.showInviteModal = false;
+                    this.inviteLink = '';
+                    this.linkCopied = false;
+                },
                 leaveRoom() {
                     if (this.socket) {
+                        // Send explicit leave message
+                        this.socket.send(JSON.stringify({
+                            type: "LEAVE_ROOM",
+                            payload: {}
+                        }));
                         this.socket.close();
                         this.socket = null;
                     }
                     this.currentRoomId = null;
                     localStorage.removeItem('roomId');
+                    localStorage.removeItem('roomToken');
+                    this.roomToken = null;
+                    this.joinPassword = '';
                     this.players = [];
                     this.messages = [];
                     this.gameState = 'lobby';
                     this.view = 'lobby';
-                    this.fetchRooms();
+                    setTimeout(() => {
+                        this.fetchRooms();
+                    }, 500);
                 },
                 toggleReady() {
                     if (!this.socket) return;
@@ -1446,7 +1781,11 @@
                     this.socket.onopen = () => {
                         this.socket.send(JSON.stringify({
                             type: "JOIN",
-                            payload: { nickname: this.nickname }
+                            payload: {
+                                nickname: this.nickname,
+                                password: this.joinPassword,
+                                token: this.roomToken
+                            }
                         }));
                     };
 
@@ -1533,6 +1872,13 @@
                         this.players = msg.payload.players;
                         this.gameState = msg.payload.state || 'lobby';
                         if (msg.payload.config) this.gameConfig = { ...this.gameConfig, ...msg.payload.config };
+
+                        // Save Token
+                        if (msg.payload.room_token) {
+                            this.roomToken = msg.payload.room_token;
+                            localStorage.setItem('roomToken', this.roomToken);
+                        }
+
                         this.messages.push({ sender: "System", text: `Joined room. Welcome!` });
 
                         if (this.gameState === 'playing') {
@@ -1540,15 +1886,27 @@
                             // Wait for next game_state_update...
                         }
                     } else if (msg.type === "PLAYER_JOINED") {
-                        this.messages.push({ sender: "System", text: `${msg.payload.nickname} joined.`, color: '#aaaaaa' });
-                        if (!this.players.find(p => p.nickname === msg.payload.nickname)) {
+                        const newPlayer = msg.payload;
+                        const existingIdx = this.players.findIndex(p => p.nickname === newPlayer.nickname);
+                        if (existingIdx !== -1) {
+                            // Reconnection - update existing player
+                            this.players[existingIdx].is_ready = newPlayer.is_ready;
+                            this.players[existingIdx].connected = true;
+                            // Show reconnection notification during game
+                            if (this.gameState === 'playing') {
+                                this.showNotification(`${newPlayer.nickname} reconnected`, 'success');
+                            }
+                        } else {
+                            // New player joining
                             this.players.push({
-                                nickname: msg.payload.nickname,
-                                is_ready: msg.payload.is_ready,
-                                is_host: false,
-                                color: msg.payload.color || '#ffffff'
+                                nickname: newPlayer.nickname,
+                                is_ready: newPlayer.is_ready,
+                                color: newPlayer.color,
+                                connected: true,
+                                score: 0
                             });
                         }
+                        this.messages.push({ sender: "System", text: `${newPlayer.nickname} joined.`, color: '#aaaaaa' });
                     } else if (msg.type === "PLAYER_UPDATE") {
                         const p = this.players.find(p => p.nickname === msg.payload.nickname);
                         if (p) {
@@ -1594,7 +1952,15 @@
                     } else if (msg.type === "CLEAR_CANVAS") {
                         this.performClear();
                     } else if (msg.type === "PLAYER_DISCONNECTED") {
-                        this.messages.push({ sender: "System", text: `${msg.payload.nickname} disconnected.` });
+                        const nickname = msg.payload.nickname;
+                        // Update player connected status
+                        const player = this.players.find(p => p.nickname === nickname);
+                        if (player) {
+                            player.connected = false;
+                        }
+                        this.messages.push({ sender: "System", text: `${nickname} disconnected.` });
+                        // Show brief notification
+                        this.showNotification(`${nickname} disconnected`, 'warning');
                     } else if (msg.type === "PLAYER_LEFT") {
                         const idx = this.players.findIndex(p => p.nickname === msg.payload.nickname);
                         if (idx !== -1) this.players.splice(idx, 1);
@@ -1621,9 +1987,25 @@
                         }
                     } else if (msg.type === "ERROR") {
                         this.showNotification(msg.payload.message);
-                        if (msg.payload.message.includes("taken") || msg.payload.message.includes("started")) {
+                        if (msg.payload.message.includes("taken") || msg.payload.message.includes("started") || msg.payload.message.includes("Incorrect password")) {
                             this.leaveRoom();
                         }
+                    } else if (msg.type === "ROOM_CLOSED") {
+                        this.showNotification("Room closed by host", 'error');
+                        // Force leave without sending LEAVE_ROOM (since socket will be closed or room is gone)
+                        if (this.socket) {
+                            this.socket.close();
+                            this.socket = null;
+                        }
+                        this.currentRoomId = null;
+                        localStorage.removeItem('roomId');
+                        this.players = [];
+                        this.messages = [];
+                        this.gameState = 'lobby';
+                        this.view = 'lobby';
+                        setTimeout(() => {
+                            this.fetchRooms();
+                        }, 500);
                     }
                 },
                 updateTimer() {
@@ -1642,11 +2024,13 @@
                 showNotification(message, type = 'error') {
                     const id = Math.random().toString(36).substr(2, 9);
 
-                    if (type === 'success') {
-                        this.notifications = this.notifications.filter(n => n.type !== 'success');
+                    if (type === 'success' || type === 'warning') {
+                        // Clear previous success/warning notifications (non-stacking)
+                        this.notifications = this.notifications.filter(n => n.type !== 'success' && n.type !== 'warning');
                         this.notifications.push({ id, message, type });
                         setTimeout(() => this.removeNotification(id), 1000);
                     } else {
+                        // Error notifications stack
                         this.notifications.push({ id, message, type });
                         setTimeout(() => this.removeNotification(id), 4000);
                     }

@@ -3,6 +3,9 @@ from typing import List, Dict, Optional
 import uuid
 import json
 import asyncio
+import time
+import hashlib
+import secrets
 
 class ConnectionManager:
     def __init__(self):
@@ -17,6 +20,10 @@ class ConnectionManager:
         if room_id not in self.active_connections:
             self.active_connections[room_id] = {}
         self.active_connections[room_id][client_id] = websocket
+        
+        # Room is not empty anymore
+        if room_id in self.rooms:
+            self.rooms[room_id]["empty_since"] = None
 
     def disconnect(self, room_id: str, client_id: str):
         if room_id in self.active_connections:
@@ -30,6 +37,10 @@ class ConnectionManager:
                     if p_data["client_id"] == client_id:
                         p_data["connected"] = False
                         break
+                
+                # Check if room is empty
+                if not self.active_connections.get(room_id):
+                    room["empty_since"] = time.time()
     
     async def broadcast(self, room_id: str, message: dict, exclude_client: str = None):
         if room_id in self.active_connections:
@@ -75,14 +86,20 @@ class ConnectionManager:
                 "word_difficulty": default_diff
             }
 
+        hashed_password = None
+        if password:
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+
         self.rooms[room_id] = {
             "id": room_id,
             "name": room_name,
-            "password": password,
+            "password": hashed_password,
+            "room_token": secrets.token_urlsafe(16),
             "game_type": game_type,
             "config": config,
             "players": {}, # nickname -> { client_id, is_host, connected }
-            "state": "lobby"
+            "state": "lobby",
+            "empty_since": time.time() # Created empty, waiting for host to connect
         }
         return room_id
     
@@ -102,22 +119,59 @@ class ConnectionManager:
             metadata["difficulties"][lang] = list(diffs.keys())
         return metadata
     
-    def try_join_room(self, room_id: str, client_id: str, nickname: str) -> str:
+    def try_join_room(self, room_id: str, client_id: str, nickname: str, password: Optional[str] = None, token: Optional[str] = None) -> str:
         """
         Returns "OK" if joined/reconnected.
         Returns "TAKEN" if nickname is taken by a connected player.
+        Returns "WRONG_PASSWORD" if password does not match.
         """
         if room_id not in self.rooms:
              return "ERROR"
         
         room = self.rooms[room_id]
         
+        # Check Password (if not re-connecting)
+        # We only check password for NEW joins or explicit validation?
+        # Actually, for reconnecting users, do we need password?
+        # If I am reconnecting, I probably should pass it or satisfy it, 
+        # but usually reconnect happens auto. If room has password, we must check it.
+        # But wait, if I am already in 'players' list, maybe I skip password check?
+        # Let's say yes, if you are established player, you can reconnect.
+        # BUT what if someone steals nickname?
+        # For simplicity, ALWAYS check password if room has it.
+        
+        requires_password = room["password"] is not None
+        if requires_password:
+             # If valid token provided, skip password check
+             if token and token == room.get("room_token"):
+                 pass # Token auth success
+             else:
+                 if not password:
+                     # It might be a reconnect where client didn't send password?
+                     # But our client will send it if we implement it right.
+                     # If nickname is in players...
+                     pass # We'll enforce it.
+                 
+                 hashed_input = hashlib.sha256(password.encode()).hexdigest() if password else ""
+                 if room["password"] != hashed_input:
+                     # Exception: If I am already in players list? 
+                     # Maybe we allow reconnects without password if we assume session persistence?
+                     # The prompt says "joining room with password", implying initial join.
+                     # Let's check logic:
+                     if nickname in room["players"]:
+                          # If trying to steal valid player, you need password too?
+                          # Yes.
+                          return "WRONG_PASSWORD"
+                     
+                     return "WRONG_PASSWORD"
+
         if nickname in room["players"]:
             existing = room["players"][nickname]
             if existing["connected"]:
                 return "TAKEN"
                 
             # Reconnection: Update client_id to the new connection
+            # If we reached here, password was correct or not required
             existing["client_id"] = client_id
             existing["connected"] = True
             return "OK"
@@ -139,6 +193,9 @@ class ConnectionManager:
                 color = random.choice(available_colors)
             else:
                 color = random.choice(COLORS) # Fallback if all taken
+            
+            import time
+            room["empty_since"] = None # Ensure it is not marked empty
 
             room["players"][nickname] = {
                 "client_id": client_id, 
@@ -520,6 +577,36 @@ class ConnectionManager:
             "type": "CLEAR_CANVAS",
             "payload": {}
         })
+
+    async def close_room(self, room_id: str):
+        if room_id in self.rooms:
+            # Notify everyone
+            await self.broadcast(room_id, {
+                "type": "ROOM_CLOSED",
+                "payload": {}
+            })
+            # Close all connections
+            if room_id in self.active_connections:
+                for client_id, ws in list(self.active_connections[room_id].items()):
+                    await ws.close()
+                del self.active_connections[room_id]
+            
+            # Remove room data
+            del self.rooms[room_id]
+
+    def cleanup_empty_rooms(self):
+        import time
+        now = time.time()
+        to_remove = []
+        for room_id, room in self.rooms.items():
+            if room.get("empty_since") and (now - room["empty_since"] > 300): # 5 minutes
+                to_remove.append(room_id)
+        
+        for room_id in to_remove:
+            # Just delete it, no one is there to notify
+            if room_id in self.active_connections:
+                del self.active_connections[room_id]
+            del self.rooms[room_id]
 
 # Global instance
 manager = ConnectionManager()
