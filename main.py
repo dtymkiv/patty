@@ -29,6 +29,11 @@ async def get():
     # Return index.html as a static file to avoid Jinja2 template parsing of Vue.js delimiters
     return FileResponse("static/index.html")
 
+@app.get("/rooms/{room_id}")
+async def get_room(room_id: str):
+    # Serve the same index.html for room routes (SPA fallback)
+    return FileResponse("static/index.html")
+
 @app.post("/api/rooms")
 async def create_room(request: CreateRoomRequest):
     config_dict = request.config.dict() if request.config else None

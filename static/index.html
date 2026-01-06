@@ -1053,6 +1053,19 @@
             </div>
         </div>
 
+        <!-- Reconnecting Overlay -->
+        <div v-if="isReconnecting"
+            class="fixed inset-x-0 top-0 z-[110] bg-orange-500 text-white text-center py-2 font-black uppercase tracking-widest shadow-md flex items-center justify-center gap-2 animate-pulse">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
+            </svg>
+            Attempting to Reconnect... ({{ reconnectAttempts }})
+        </div>
+
         <!-- Notifications Overlay -->
         <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
             <transition-group name="notification">
@@ -1162,7 +1175,12 @@
                     showInviteModal: false,
                     inviteLink: '',
                     linkCopied: false,
-                    pendingRoomJoin: null // {roomId, token} from URL params
+                    pendingRoomJoin: null, // {roomId, token} from URL params
+
+                    // Reconnection State
+                    reconnectAttempts: 0,
+                    isReconnecting: false,
+                    reconnectTimer: null
                 }
             },
             computed: {
@@ -1283,16 +1301,42 @@
                 window.addEventListener('resize', this.handleResize);
 
                 // Check for invite link parameters
+                // Check for invite link parameters (path or query)
                 const urlParams = new URLSearchParams(window.location.search);
-                const roomParam = urlParams.get('room');
-                const tokenParam = urlParams.get('token');
+                const queryRoom = urlParams.get('room');
+                const queryToken = urlParams.get('token');
 
-                if (roomParam && tokenParam) {
+                // Check path for room ID: /rooms/{id}
+                const pathMatch = window.location.pathname.match(/^\/rooms\/([^\/]+)\/?$/);
+                const pathRoom = pathMatch ? pathMatch[1] : null;
+
+                const roomParam = pathRoom || queryRoom;
+                const tokenParam = queryToken; // Token usually still in query for invites, or localstorage
+
+                if (roomParam) {
                     // Store pending room join
                     this.pendingRoomJoin = { roomId: roomParam, token: tokenParam };
-                    // Clear URL parameters
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                    // We don't clear URL here anymore, we want to keep it if it's the right format
+                    // But if it was query param, we might want to clean it up later.
+                    // For now, let's leave it, the proceedToJoin will fix the URL format.
                 }
+
+                // Handle Browser Back/Forward
+                window.addEventListener('popstate', (event) => {
+                    if (this.view === 'room' && window.location.pathname === '/') {
+                        // User pressed back to go to lobby
+                        // Treat as disconnect (like tab close), not explicit leave
+                        if (this.socket) {
+                            this.socket.close();
+                            this.socket = null;
+                        }
+                        this.resetState();
+                    } else if (this.view === 'lobby' && window.location.pathname.startsWith('/rooms/')) {
+                        // Forward to room?
+                        // Reloading might be safer to ensure clean state or re-attempt join
+                        window.location.reload();
+                    }
+                });
 
                 const savedNick = localStorage.getItem('nickname');
                 const savedRoom = localStorage.getItem('roomId');
@@ -1321,6 +1365,13 @@
                     } else if (savedRoom) {
                         this.view = 'room';
                         this.currentRoomId = savedRoom;
+
+                        // Sync URL if needed
+                        const expectedUrl = `/rooms/${savedRoom}`;
+                        if (window.location.pathname !== expectedUrl) {
+                            window.history.replaceState({ roomId: savedRoom }, '', expectedUrl);
+                        }
+
                         if (savedToken) {
                             this.roomToken = savedToken;
                         }
@@ -1501,6 +1552,13 @@
                 proceedToJoin(roomId) {
                     this.currentRoomId = roomId;
                     localStorage.setItem('roomId', roomId);
+
+                    // Update URL to /rooms/{id}
+                    const newUrl = `/rooms/${roomId}`;
+                    if (window.location.pathname !== newUrl) {
+                        window.history.pushState({ roomId: roomId }, '', newUrl);
+                    }
+
                     // Do NOT save password here. 
                     // Wait for JOIN_SUCCESS to save token.
                     this.view = 'room';
@@ -1525,7 +1583,8 @@
 
                     // Generate invite link
                     const baseUrl = window.location.origin;
-                    this.inviteLink = `${baseUrl}/?room=${this.currentRoomId}&token=${this.roomToken}`;
+                    // Use path based URL if token is present, append as query
+                    this.inviteLink = `${baseUrl}/rooms/${this.currentRoomId}?token=${this.roomToken}`;
                     this.linkCopied = false;
                     this.showInviteModal = true;
 
@@ -1800,6 +1859,16 @@
                     this.socket = new WebSocket(wsUrl);
 
                     this.socket.onopen = () => {
+                        console.log("WebSocket connected");
+                        // Reset reconnection state
+                        if (this.isReconnecting) {
+                            this.showNotification("Reconnected!", "success");
+                        }
+                        this.reconnectAttempts = 0;
+                        this.isReconnecting = false;
+                        // Clear disconnection warning notification if any
+                        this.notifications = this.notifications.filter(n => n.message !== "Disconnected. Reconnecting..." && !n.message.includes("Reconnecting in"));
+
                         this.socket.send(JSON.stringify({
                             type: "JOIN",
                             payload: {
@@ -1820,19 +1889,43 @@
                         this.socket = null; // Clear socket ref
 
                         if (event.code === 4000) {
+                            // Room permanently closed
                             this.showNotification("Room no longer exists", "error");
                             this.resetState();
+                        } else if (event.code === 1000 || event.code === 1001) {
+                            // Normal closure
+                            // Do nothing
                         } else if (this.view === 'room') {
                             // Abnormal close (1006) or other interrupt.
                             // Attempt to reconnect if we are still conceptually "in a room"
-                            console.log("Attempting reconnect...");
-                            setTimeout(() => {
-                                if (this.view === 'room' && !this.socket) {
-                                    this.connectWebSocket();
-                                }
-                            }, 2000);
+                            this.attemptReconnect();
                         }
                     };
+                },
+                attemptReconnect() {
+                    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+
+                    this.reconnectAttempts++;
+                    this.isReconnecting = true;
+
+                    // Exponential backoff: 1s, 2s, 4s, 8s, 16s, 30s (cap)
+                    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+                    const delaySec = Math.round(delay / 1000);
+
+                    console.log(`Attempting reconnect #${this.reconnectAttempts} in ${delay}ms`);
+
+                    // Show sticky notification
+                    // Remove previous reconnecting messages to avoid stack
+                    this.notifications = this.notifications.filter(n => !n.message.includes("Reconnecting"));
+
+                    this.showNotification(`Disconnected. Reconnecting in ${delaySec}s...`, "warning");
+
+                    this.reconnectTimer = setTimeout(() => {
+                        if (this.view === 'room') {
+                            this.showNotification("Reconnecting...", "warning");
+                            this.connectWebSocket();
+                        }
+                    }, delay);
                 },
                 startResultsAnimation() {
                     const results = this.lastTurnResults;
@@ -2072,6 +2165,10 @@
                     this.notifications = this.notifications.filter(n => n.id !== id);
                 },
                 resetState() {
+                    // Revert URL to / if not already
+                    if (window.location.pathname !== '/') {
+                        window.history.pushState({}, '', '/');
+                    }
                     this.currentRoomId = null;
                     localStorage.removeItem('roomId');
                     localStorage.removeItem('roomToken');
