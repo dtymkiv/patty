@@ -255,7 +255,9 @@ class ConnectionManager:
                 "last_drawer": None,
                 "last_word": None,
                 "turn_results": {}, # nickname -> {points, time}
-                "stroke_history": []
+                "stroke_history": [],
+                "used_words": set(),
+                "last_word_set": None # (language, difficulty)
             }
             
             # Reset scores
@@ -297,11 +299,13 @@ class ConnectionManager:
         # Check Turn Queue
         if not gs["turn_queue"]:
             gs["turn_queue"] = self._get_turn_queue(room)
-            gs["round"] += 1
 
         if not gs["turn_queue"]:
              await self.end_game(room_id)
              return
+
+        # Increment round for every new turn
+        gs["round"] += 1
 
         drawer = gs["turn_queue"].pop(0)
         gs["drawer"] = drawer
@@ -322,7 +326,23 @@ class ConnectionManager:
             
         all_words = lang_set[difficulty]
         
-        word = random.choice(all_words)
+        # Non-repeating logic with set optimization
+        current_set_id = (language, difficulty)
+        if gs.get("last_word_set") != current_set_id:
+            gs["used_words"] = set()
+            gs["last_word_set"] = current_set_id
+
+        # Use set exclusion for better performance
+        # available_words will be a list for random.choice
+        available_words = list(set(all_words) - gs["used_words"])
+        
+        # Reset if all words used
+        if not available_words:
+            gs["used_words"] = set()
+            available_words = all_words
+
+        word = random.choice(available_words)
+        gs["used_words"].add(word)
         gs["word"] = word
         # For hints, we use underscores for letters and space for spaces. 
         # Frontend will handle the rendering.

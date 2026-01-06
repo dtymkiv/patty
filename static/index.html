@@ -563,12 +563,22 @@
                             class="game-area-inner w-full h-full flex flex-col relative text-gray-900 dark:text-white">
                             <!-- Condensed Game Header -->
                             <div
-                                class="game-info-header flex items-center justify-between px-4 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-2xl shrink-0 gap-4">
-                                <div class="flex flex-col items-center leading-tight">
-                                    <span
-                                        class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black tracking-widest">Round</span>
-                                    <span class="font-black text-gray-700 dark:text-white">{{ gameStateData.round
-                                        }}</span>
+                                class="game-info-header flex items-center justify-between px-2 py-2 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-2xl shrink-0 gap-2 sm:px-4 sm:py-2 sm:gap-4">
+                                <div class="flex flex-col items-center leading-none">
+                                    <div class="flex items-center gap-0.5 mb-0.5">
+                                        <span
+                                            class="text-[10px] text-gray-400 dark:text-gray-500 uppercase font-black">№</span>
+                                        <span class="font-black text-xs text-gray-700 dark:text-white leading-none">{{
+                                            gameStateData.round }}</span>
+                                    </div>
+                                    <div v-if="gameStateData.phase === 'DRAWING'"
+                                        class="text-[9px] font-black text-[#ea5128] leading-none">
+                                        {{ gameStateData.correct_guessers.length }}/{{ totalGuessers }}
+                                    </div>
+                                    <div v-else
+                                        class="text-[9px] font-bold text-gray-400 dark:text-gray-600 leading-none">
+                                        &mdash;
+                                    </div>
                                 </div>
                                 <div class="info-separator h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
                                 <div class="flex items-center gap-1.5 timer-display">
@@ -602,8 +612,9 @@
                                         Drawing
                                     </div>
                                     <div v-else
-                                        class="text-[#ea5128] font-black uppercase tracking-widest bg-[#ea5128]/10 px-2 py-1 rounded-lg border border-[#ea5128]/20">
-                                        Guessing
+                                        class="text-[#ea5128] font-black uppercase tracking-widest bg-[#ea5128]/10 px-2 py-1 rounded-lg border border-[#ea5128]/20 truncate max-w-[80px] sm:max-w-[120px]"
+                                        :title="gameStateData.drawer">
+                                        {{ gameStateData.drawer }}
                                     </div>
                                 </div>
                             </div>
@@ -887,7 +898,7 @@
                                             <span class="font-black text-gray-800 dark:text-gray-200 text-lg">{{
                                                 res.nickname }} <span v-if="res.nickname === gameStateData.last_drawer"
                                                     class="text-xs text-[#ea5128] italic font-bold">(Drawer)</span></span>
-                                            <span
+                                            <span v-if="gameStateData.last_drawer"
                                                 class="text-green-600 dark:text-green-400 font-black text-2xl animate-pulse">+{{
                                                 res.points
                                                 }}</span>
@@ -1185,16 +1196,22 @@
                 },
                 dynamicFontSize() {
                     const word = this.amIDrawing ? this.gameStateData.word : this.gameStateData.word_hints;
-                    const len = word ? word.length : 0;
+                    if (!word) return 24;
+                    const len = word.length;
                     if (len === 0) return 24;
 
-                    // Base sizes based on length
-                    if (len <= 10) return 24;
-                    if (len <= 20) return 20;
-                    if (len <= 30) return 16;
-                    if (len <= 40) return 13;
-                    if (len <= 60) return 11;
-                    return 9;
+                    // Estimate available width for the word/hints section
+                    // We need to fit between the timer and the side badges/logo
+                    const availableWidth = this.isMobileView ? 110 : 350;
+
+                    // Base calculation: width divided by length with a character width multiplier
+                    // More conservative multiplier (0.9 instead of 0.7) to scale down earlier
+                    let size = Math.floor(availableWidth / (len * 0.8));
+
+                    const minSize = this.isMobileView ? 6 : 10;
+                    const maxSize = this.isMobileView ? 18 : 28;
+
+                    return Math.max(minSize, Math.min(maxSize, size));
                 },
                 hintCharStyle() {
                     const totalChars = this.gameStateData.word_hints ? this.gameStateData.word_hints.length : 0;
@@ -1203,7 +1220,7 @@
                     const size = this.dynamicFontSize;
                     return {
                         fontSize: `${size}px`,
-                        width: `${Math.max(6, size * 0.8)}px`,
+                        width: `${Math.max(4, size * 0.7)}px`,
                         height: `${size * 1.3}px`,
                         borderBottomWidth: `${Math.max(1, size / 8)}px`,
                         marginBottom: '1px'
@@ -1219,6 +1236,15 @@
                         return this.messages.slice(-3);
                     }
                     return this.messages;
+                },
+                totalGuessers() {
+                    const hostPlays = this.gameConfig.host_plays;
+                    return this.players.filter(p => {
+                        if (!p.connected) return false;
+                        if (p.nickname === this.gameStateData.drawer) return false;
+                        if (p.is_host && !hostPlays) return false;
+                        return true;
+                    }).length;
                 }
             },
             watch: {
