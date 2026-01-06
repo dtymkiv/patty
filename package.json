@@ -1,0 +1,12 @@
+{
+  "name": "patty-frontend",
+  "version": "1.0.0",
+  "description": "Frontend build for Patty",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./input.css -o ./static/styles.css --minify"
+  },
+  "dependencies": {
+    "tailwindcss": "^3.4.1"
+  }
+}

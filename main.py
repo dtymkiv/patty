@@ -58,6 +58,7 @@ async def get_word_set_metadata():
 async def websocket_endpoint(websocket: WebSocket, room_id: str, client_id: str):
     room = manager.get_room(room_id)
     if not room:
+        await websocket.accept()
         await websocket.close(code=4000)
         return
 

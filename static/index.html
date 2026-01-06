@@ -1587,18 +1587,7 @@
                         this.socket.close();
                         this.socket = null;
                     }
-                    this.currentRoomId = null;
-                    localStorage.removeItem('roomId');
-                    localStorage.removeItem('roomToken');
-                    this.roomToken = null;
-                    this.joinPassword = '';
-                    this.players = [];
-                    this.messages = [];
-                    this.gameState = 'lobby';
-                    this.view = 'lobby';
-                    setTimeout(() => {
-                        this.fetchRooms();
-                    }, 500);
+                    this.resetState();
                 },
                 toggleReady() {
                     if (!this.socket) return;
@@ -1826,7 +1815,24 @@
                         this.handleMessage(msg);
                     };
 
-                    this.socket.onclose = () => { console.log("Disconnected"); };
+                    this.socket.onclose = (event) => {
+                        console.log("Disconnected", event.code);
+                        this.socket = null; // Clear socket ref
+
+                        if (event.code === 4000) {
+                            this.showNotification("Room no longer exists", "error");
+                            this.resetState();
+                        } else if (this.view === 'room') {
+                            // Abnormal close (1006) or other interrupt.
+                            // Attempt to reconnect if we are still conceptually "in a room"
+                            console.log("Attempting reconnect...");
+                            setTimeout(() => {
+                                if (this.view === 'room' && !this.socket) {
+                                    this.connectWebSocket();
+                                }
+                            }, 2000);
+                        }
+                    };
                 },
                 startResultsAnimation() {
                     const results = this.lastTurnResults;
@@ -2032,15 +2038,7 @@
                             this.socket.close();
                             this.socket = null;
                         }
-                        this.currentRoomId = null;
-                        localStorage.removeItem('roomId');
-                        this.players = [];
-                        this.messages = [];
-                        this.gameState = 'lobby';
-                        this.view = 'lobby';
-                        setTimeout(() => {
-                            this.fetchRooms();
-                        }, 500);
+                        this.resetState();
                     }
                 },
                 updateTimer() {
@@ -2072,6 +2070,41 @@
                 },
                 removeNotification(id) {
                     this.notifications = this.notifications.filter(n => n.id !== id);
+                },
+                resetState() {
+                    this.currentRoomId = null;
+                    localStorage.removeItem('roomId');
+                    localStorage.removeItem('roomToken');
+                    this.roomToken = null;
+                    this.joinPassword = '';
+                    this.players = [];
+                    this.messages = [];
+                    this.gameState = 'lobby';
+                    this.view = 'lobby';
+                    this.isDrawing = false;
+                    this.strokeHistory = [];
+                    this.performClear();
+
+                    // Reset Game Logic Data
+                    this.gameStateData = {
+                        round: 0,
+                        drawer: null,
+                        phase: 'PRE_ROUND',
+                        timer_end: 0,
+                        time_left: 0,
+                        word: '',
+                        word_hints: '',
+                        scores: {},
+                        correct_guessers: []
+                    };
+                    this.notifications = [];
+                    this.showLeaveModal = false;
+                    this.showPasswordModal = false;
+                    this.showInviteModal = false;
+
+                    setTimeout(() => {
+                        this.fetchRooms();
+                    }, 500);
                 }
             }
         }).mount('#app')
