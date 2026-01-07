@@ -111,8 +111,8 @@ createApp({
                 return true;
             });
             
-            // If host is spectator, need 2 players; if host is player, need 1 player
-            const minPlayers = this.gameConfig.host_role === 'spectator' ? 2 : 1;
+            // If host is spectator, need 2 players; if host is player, need 1 additional player (2 total)
+            const minPlayers = 2;
             return activePlayers.length >= minPlayers;
         },
         amIDrawing() {
@@ -434,10 +434,62 @@ createApp({
             if (restored) {
                 // Sync UI with restored state
                 this.players = this.hostLogic.getPlayersList();
+                const oldPhase = this.gameStateData.phase;
                 this.gameStateData = this.hostLogic.state;
                 this.gameConfig = this.hostLogic.config;
                 this.gameState = this.gameStateData.phase === 'LOBBY' ? 'lobby' : 'playing';
-                this.hostLogic.broadcastState();
+                
+                // Sync stroke history from restored state and redraw canvas
+                // Always redraw host's canvas if there's stroke history (host needs to see the drawing)
+                if (this.gameStateData.stroke_history && Array.isArray(this.gameStateData.stroke_history)) {
+                    this.strokeHistory = this.gameStateData.stroke_history;
+                    // Redraw canvas for host (whether they're drawer or not, they should see the current drawing)
+                    if (this.amIHost && this.strokeHistory.length > 0) {
+                        // Use setTimeout to ensure canvas is initialized
+                        setTimeout(() => {
+                            if (!this.ctx) this.initCanvas();
+                            if (this.ctx && this.strokeHistory.length > 0) {
+                                // Redraw from history (which will clear canvas and redraw)
+                                this.redrawFromHistory(this.strokeHistory);
+                            }
+                        }, 100);
+                    }
+                }
+                
+                // Trigger results animation if phase is DRAWER_PREPARING (in case watcher didn't fire)
+                if (this.gameStateData.phase === 'DRAWER_PREPARING') {
+                    this.$nextTick(() => {
+                        this.startResultsAnimation();
+                    });
+                }
+                
+                // For DRAWING phase, broadcast state WITH stroke_history
+                // The canvas clearing logic checks for stroke_history before clearing, so it won't clear
+                // if strokes exist. This ensures host gets the current state (even if slightly outdated)
+                // and other players won't lose their strokes because the clearing logic won't trigger.
+                if (this.gameStateData.phase !== 'DRAWING') {
+                    this.hostLogic.broadcastState();
+                } else {
+                    // During DRAWING phase, broadcast state with stroke_history
+                    // This syncs everyone to the same state (host's restored state)
+                    // Canvas won't be cleared because stroke_history exists
+                    this.hostLogic.broadcastState();
+                    
+                    // Ensure timer is running after reconnection during DRAWING phase
+                    // The timer should have been restored in loadState(), but ensure it's running
+                    if (this.gameStateData.timer_end > 0 && !this.hostLogic.timerInterval) {
+                        const now = Date.now() / 1000;
+                        if (now < this.gameStateData.timer_end) {
+                            // Timer hasn't expired, restart it
+                            this.hostLogic.timerInterval = setInterval(() => {
+                                this.hostLogic.checkTimer();
+                            }, 1000);
+                        } else {
+                            // Timer expired, end round
+                            this.hostLogic.endRound();
+                        }
+                    }
+                }
             }
 
             // Initialize wordSets if assets are already loaded
@@ -526,6 +578,9 @@ createApp({
                     return;
                 }
                 if (msg.type === "DRAW_STROKE") {
+                    // Host needs to draw on local canvas too (for reconnection scenarios)
+                    // Draw locally first, then update authoritative state
+                    this.drawStroke(msg.payload.x1, msg.payload.y1, msg.payload.x2, msg.payload.y2, msg.payload.color);
                     this.hostLogic.handleDraw(msg.payload);
                     return;
                 }
@@ -706,24 +761,33 @@ createApp({
 
                 // Canvas Init & Clears - Initialize canvas early if needed
                 this.$nextTick(() => {
-                    if (!this.ctx) this.initCanvas();
+                    // Update stroke history from game state if available (do this first)
+                    const hasStrokeHistory = msg.payload.game_state.stroke_history && Array.isArray(msg.payload.game_state.stroke_history) && msg.payload.game_state.stroke_history.length > 0;
+                    
+                    if (hasStrokeHistory) {
+                        this.strokeHistory = msg.payload.game_state.stroke_history;
+                    }
+                    
+                    // Initialize canvas and handle stroke history restoration
+                    if (!this.ctx) {
+                        this.initCanvas();
+                        // initCanvas will automatically redraw from this.strokeHistory if it has content (line 1130-1132)
+                    } else {
+                        // Canvas already initialized, redraw if we have history
+                        if (hasStrokeHistory) {
+                            this.redrawFromHistory(this.strokeHistory);
+                        }
+                    }
                     
                     // Clear canvas on phase transitions (new round starting)
-                    if (msg.payload.game_state.phase === 'DRAWER_PREPARING' || msg.payload.game_state.phase === 'PRE_ROUND') {
+                    // Only clear if phase is DRAWER_PREPARING/PRE_ROUND AND stroke_history is empty (new round, not restoration)
+                    // NEVER clear during DRAWING phase - always preserve existing strokes
+                    if ((msg.payload.game_state.phase === 'DRAWER_PREPARING' || msg.payload.game_state.phase === 'PRE_ROUND') 
+                        && !hasStrokeHistory
+                        && msg.payload.game_state.phase !== 'DRAWING') {
                         this.performClear();
                     }
                 });
-
-                // Update stroke history from game state if available
-                if (msg.payload.game_state.stroke_history && Array.isArray(msg.payload.game_state.stroke_history)) {
-                    this.strokeHistory = msg.payload.game_state.stroke_history;
-                    // Redraw canvas with the received stroke history
-                    this.$nextTick(() => {
-                        if (this.ctx) {
-                            this.redrawFromHistory(this.strokeHistory);
-                        }
-                    });
-                }
                 
                 // Clear incorrect guess tracking when a new DRAWING phase starts
                 if (msg.payload.game_state.phase === 'DRAWING') {
@@ -1149,9 +1213,13 @@ createApp({
             return { x, y };
         },
         redrawFromHistory(hist) {
-            this.performClear();
+            // Clear canvas only, don't clear history (we're restoring it)
+            if (this.ctx) {
+                this.ctx.clearRect(0, 0, 2000, 1500);
+            }
             if (!hist) return;
-            hist.forEach(s => this.drawStroke(s.x1, s.y1, s.x2, s.y2, s.color));
+            // Draw all strokes from history
+            hist.forEach(s => this.drawStroke(s.x1, s.y1, s.x2, s.y2, s.color, true));
         },
         startResultsAnimation() {
             this.animatedResults = [];

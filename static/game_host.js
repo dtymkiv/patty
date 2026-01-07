@@ -76,6 +76,21 @@ class GameHost {
             return;
         }
 
+        // Validate minimum players: need 2 active players
+        // (If host is spectator, need 2 non-host players; if host is player, need host + 1 other)
+        const activePlayers = Object.keys(this.players).filter(nick => {
+            const p = this.players[nick];
+            if (!p.connected) return false;
+            if (p.is_host && this.config.host_role === 'spectator') return false;
+            return true;
+        });
+
+        if (activePlayers.length < 2) {
+            console.error("Cannot start game: Need at least 2 active players");
+            this.broadcast("ERROR", { message: "Need at least 2 players to start the game." });
+            return;
+        }
+
         this.state.phase = "PRE_ROUND";
         this.state.round = 0;
 
@@ -318,6 +333,8 @@ class GameHost {
     handleDraw(stroke) {
         this.state.stroke_history.push(stroke);
         this.broadcast("DRAW_STROKE", stroke);
+        // Save state on every stroke to ensure reconnection has latest strokes
+        this.saveState();
     }
 
     handleUndo() {
@@ -421,7 +438,12 @@ class GameHost {
         // `sendTo` sends to specific.
 
         // 1. Broadcast Public State
-        const publicState = { ...this.state, word: null };
+        const publicState = { 
+            ...this.state, 
+            word: null,
+            // Explicitly include stroke_history for reconnection scenarios
+            stroke_history: this.state.stroke_history || []
+        };
         if (this.state.phase === "GAME_OVER" || this.state.phase === "POST_ROUND") {
             publicState.word = this.state.word; // Reveal at end
         }
@@ -434,6 +456,31 @@ class GameHost {
         });
 
         this.saveState();
+        
+        // Ensure timer is running if we're in DRAWING phase
+        if (this.state.phase === "DRAWING" && this.state.timer_end > 0) {
+            const now = Date.now() / 1000;
+            if (now >= this.state.timer_end) {
+                // Timer expired, end round
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+                setTimeout(() => this.endRound(), 0);
+            } else if (!this.timerInterval) {
+                // Timer should be running but isn't - restart it
+                this.timerInterval = setInterval(() => {
+                    if (this.state.phase === "DRAWING" && this.state.timer_end > 0) {
+                        this.checkTimer();
+                    } else {
+                        if (this.timerInterval) {
+                            clearInterval(this.timerInterval);
+                            this.timerInterval = null;
+                        }
+                    }
+                }, 1000);
+            }
+        }
 
         // 2. Send Secret Word to Drawer
         const drawerId = this.findClientIdByNickname(this.state.drawer); // We need a way to map Nick -> ClientID?
@@ -534,6 +581,10 @@ class GameHost {
             this.players = data.players || {};
             this.state = { ...this.state, ...data.state };
             this.state.used_words = new Set(data.state?.used_words || []);
+            // Ensure stroke_history is an array
+            if (!Array.isArray(this.state.stroke_history)) {
+                this.state.stroke_history = [];
+            }
             this.config = data.config || this.config;
             
             // Restore used colors from saved players
@@ -543,6 +594,38 @@ class GameHost {
                     this.usedColors.add(p.color);
                 }
             });
+            
+            // Restore timer if game is in DRAWING phase
+            if (this.state.phase === "DRAWING" && this.state.timer_end > 0) {
+                // Clear any existing timer
+                if (this.timerInterval) {
+                    clearInterval(this.timerInterval);
+                    this.timerInterval = null;
+                }
+                
+                // Check if timer has already expired
+                const now = Date.now() / 1000;
+                if (now >= this.state.timer_end) {
+                    // Timer expired while host was disconnected - end round immediately
+                    // Use setTimeout to ensure state is fully restored before ending round
+                    setTimeout(() => {
+                        this.endRound();
+                    }, 100);
+                } else {
+                    // Restart timer interval - use arrow function to preserve 'this'
+                    this.timerInterval = setInterval(() => {
+                        if (this.state.phase === "DRAWING" && this.state.timer_end > 0) {
+                            this.checkTimer();
+                        } else {
+                            // Phase changed or timer_end invalid, clear interval
+                            if (this.timerInterval) {
+                                clearInterval(this.timerInterval);
+                                this.timerInterval = null;
+                            }
+                        }
+                    }, 1000);
+                }
+            }
             
             return true;
         } catch (e) {
