@@ -240,6 +240,7 @@
             }
         }
     </style>
+    <script src="/static/game_host.js"></script>
 </head>
 
 <body :class="{ 'dark': isDarkMode }">
@@ -345,77 +346,56 @@
                 <button @click="setNickname"
                     class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-bold py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95">Enter
                     Lobby</button>
-            </div>
-
-            <!-- View: Lobby -->
+            </div><!-- -->
             <div v-else-if="view === 'lobby'"
-                class="w-full max-w-6xl px-4 sm:px-4 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mx-auto shrink-0 pb-8">
-                <!-- Room List -->
+                class="w-full max-w-4xl px-4 sm:px-4 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mx-auto shrink-0 pb-8">
+
+                <!-- Join Room by Code -->
                 <div
-                    class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-xl font-black text-gray-900 dark:text-gray-100">Open Rooms</h2>
-                        <button @click="fetchRooms"
-                            class="text-sm text-[#ea5128] hover:text-[#ff6e4a] font-bold transition-colors">Refresh</button>
+                    class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300 flex flex-col items-center justify-center text-center">
+                    <h2 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-6">Join with Code</h2>
+                    <div class="flex flex-col w-full max-w-xs gap-4">
+                        <input v-model="joinCodeInput" type="text" placeholder="123456" maxlength="6"
+                            class="text-center text-3xl tracking-[0.5em] font-mono p-4 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-4 focus:ring-[#ea5128] uppercase transition-all">
+                        <button @click="joinRoomByCode" :disabled="joinCodeInput.length !== 6"
+                            class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-black py-4 rounded-xl transition-all shadow-lg hover:shadow-[#ea512833] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
+                            JOIN GAME
+                        </button>
                     </div>
-                    <div v-if="rooms.length === 0"
-                        class="text-gray-400 dark:text-gray-500 text-center py-8 bg-gray-50 dark:bg-gray-700/30 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-                        No rooms found. Create one!
-                    </div>
-                    <ul v-else class="space-y-2">
-                        <li v-for="room in rooms" :key="room.id"
-                            class="flex justify-between items-center bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-transparent hover:border-[#ea5128] dark:hover:bg-gray-700 transition-all">
-                            <div>
-                                <span class="font-bold text-gray-800 dark:text-gray-200">{{ room.name }}</span>
-                                <span v-if="room.has_password" class="ml-2 text-xs text-yellow-500">🔒</span>
-                            </div>
-                            <div class="flex items-center gap-4">
-                                <span class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{{ room.players_count
-                                    }} active</span>
-                                <button @click="joinRoom(room.id)"
-                                    class="bg-[#ea5128] hover:bg-[#c1381b] px-4 py-1.5 rounded-lg text-sm text-white font-bold transition-all shadow-md active:scale-95">Join</button>
-                            </div>
-                        </li>
-                    </ul>
                 </div>
 
                 <!-- Create Room -->
                 <div
-                    class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl h-fit border border-gray-200 dark:border-gray-700 transition-colors duration-300">
-                    <h2 class="text-xl font-black text-gray-900 dark:text-gray-100 mb-4">Create Room</h2>
-                    <input v-model="newRoomName" type="text" placeholder="Room Name"
-                        class="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white mb-3 border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300">
-                    <input v-model="newRoomPassword" type="text" placeholder="Password (Optional)"
-                        class="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white mb-4 border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300">
-
-                    <label class="block text-gray-500 dark:text-gray-400 text-sm mb-1 font-bold">Game Mode</label>
-                    <select v-model="selectedGameType"
-                        class="w-full p-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white mb-6 border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300">
-                        <option value="drawing">Drawing Guesser</option>
-                    </select>
+                    class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300 text-center flex flex-col items-center justify-center">
+                    <h2 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">Host a Game</h2>
+                    <p class="text-gray-500 dark:text-gray-400 mb-8 font-medium italic">
+                        Start a new room and share the 6-digit code with your friends.
+                    </p>
 
                     <button @click="createRoom"
-                        class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-black py-4 rounded-xl transition-all shadow-lg hover:shadow-[#ea512833] active:scale-95">Create
-                        & Join Room</button>
+                        class="w-full bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl transition-all shadow-lg hover:shadow-green-500/20 active:scale-95 uppercase tracking-widest text-sm">
+                        CREATE NEW GAME
+                    </button>
                 </div>
-            </div>
-
-            <!-- View: Room (Game) -->
+            </div><!-- -->
             <div v-else-if="view === 'room'"
                 class="room-view-container w-full max-w-6xl flex-1 flex flex-col container mx-auto px-4 sm:px-4 transition-all duration-300 pb-8"
                 :class="{ 'pt-0': isInputFocused && isMobileView }">
                 <div v-show="!(isInputFocused && isMobileView)"
                     class="room-nav-row px-0 mb-2 sm:mb-4 mt-2 sm:mt-0 flex justify-between items-center shrink-0 transition-all duration-300">
-                    <button @click="handleLeaveRequest"
-                        class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1 sm:gap-2 font-bold whitespace-nowrap">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd"
-                                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        <span class="text-sm sm:text-base">Leave</span>
-                        <span class="hidden xs:inline text-sm sm:text-base">Room</span>
-                    </button>
+                    <div class="flex flex-col">
+                        <button @click="handleLeaveRequest"
+                            class="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors flex items-center gap-1 sm:gap-2 font-bold whitespace-nowrap">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20"
+                                fill="currentColor">
+                                <path fill-rule="evenodd"
+                                    d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            <span class="text-sm sm:text-base">Leave</span>
+                        </button>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">Code: {{ roomCode }}</span>
+                    </div>
                     <div class="flex gap-2 sm:gap-4">
                         <div v-if="gameState === 'lobby'" class="flex gap-2 sm:gap-4">
                             <button @click="openInviteModal"
@@ -452,13 +432,33 @@
                                 Settings</h3>
 
                             <div class="space-y-8">
+                                <!-- Host Role -->
+                                <div>
+                                    <label
+                                        class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-2">Host
+                                        Role</label>
+                                    <div class="flex gap-4">
+                                        <button @click="setHostRole('player')" :disabled="!amIHost"
+                                            :class="gameConfig.host_role === 'player' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
+                                            class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
+                                            Player
+                                        </button>
+                                        <button @click="setHostRole('spectator')" :disabled="!amIHost"
+                                            :class="gameConfig.host_role === 'spectator' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
+                                            class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
+                                            Spectator
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <!-- Round Duration -->
                                 <div>
                                     <div class="flex justify-between mb-2">
                                         <label
                                             class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">Round
                                             Duration</label>
-                                        <span class="text-[#ea5128] font-black">{{ gameConfig.round_duration }}s</span>
+                                        <span class="text-[#ea5128] font-black">{{ gameConfig.round_duration
+                                            }}s</span>
                                     </div>
                                     <input type="range" min="30" max="180" step="10"
                                         v-model.number="gameConfig.round_duration" @input="updateConfig"
@@ -472,7 +472,8 @@
                                         <label
                                             class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">Points
                                             to Win</label>
-                                        <span class="text-[#ea5128] font-black">{{ gameConfig.points_to_win }}</span>
+                                        <span class="text-[#ea5128] font-black">{{ gameConfig.points_to_win
+                                            }}</span>
                                     </div>
                                     <input type="range" min="5" max="250" step="5"
                                         v-model.number="gameConfig.points_to_win" @input="updateConfig"
@@ -539,23 +540,10 @@
                                     </div>
                                 </div>
 
-                                <!-- Host Plays -->
-                                <div class="flex items-center justify-between">
-                                    <label
-                                        class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">Host
-                                        Plays</label>
-                                    <button @click="toggleHostPlays" :disabled="!amIHost" type="button"
-                                        class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#ea5128] focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900"
-                                        :class="[gameConfig.host_plays ? 'bg-[#ea5128]' : 'bg-gray-200 dark:bg-gray-700', !amIHost ? 'cursor-not-allowed opacity-50' : '']">
-                                        <span class="sr-only">Use setting</span>
-                                        <span aria-hidden="true"
-                                            :class="gameConfig.host_plays ? 'translate-x-5' : 'translate-x-0'"
-                                            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                                    </button>
-                                </div>
                             </div>
 
-                            <p v-if="!amIHost" class="mt-8 text-center text-gray-500 text-sm italic">Only the host can
+                            <p v-if="!amIHost" class="mt-8 text-center text-gray-500 text-sm italic">Only the host
+                                can
                                 change settings.</p>
                         </div>
 
@@ -595,7 +583,7 @@
                                         {{ gameStateData.word }}
                                     </div>
                                     <div v-else class="flex flex-wrap justify-center gap-x-2 gap-y-1 px-2">
-                                        <div v-for="(wordGroup, gIdx) in gameStateData.word_hints.split(' ')"
+                                        <div v-for="(wordGroup, gIdx) in (gameStateData.word_hints || '').split(' ')"
                                             :key="gIdx" class="flex gap-x-0.5">
                                             <span v-for="(char, cIdx) in wordGroup" :key="cIdx"
                                                 class="font-black text-gray-700 dark:text-gray-300 border-b-2 border-gray-300 dark:border-gray-700 flex items-center justify-center"
@@ -664,13 +652,13 @@
                                     </div>
                                 </div>
 
-                                <!-- Guess Input (Guesser Only, or during rounds for everyone if not drawing) -->
-                                <div v-if="!amIDrawing && gameStateData.phase !== 'POST_ROUND' && gameStateData.phase !== 'GAME_OVER' && gameStateData.phase !== 'DRAWER_PREPARING'"
+                                <!-- Chat Input (Lobby or Guess Input during game) -->
+                                <div v-if="(gameState === 'lobby' || (!amIDrawing && gameStateData.phase !== 'POST_ROUND' && gameStateData.phase !== 'GAME_OVER' && gameStateData.phase !== 'DRAWER_PREPARING'))"
                                     class="guess-input-group flex gap-2">
                                     <input v-model="chatInput" @keyup.enter="sendChat" type="text"
                                         @focus="handleInputFocus" @blur="handleInputBlur"
                                         :disabled="hasGuessed && gameStateData.phase === 'DRAWING'"
-                                        :placeholder="hasGuessed ? 'You guessed correctly!' : 'Type a guess...'"
+                                        :placeholder="gameState === 'lobby' ? 'Type a message...' : (amIHost && gameConfig.host_role === 'spectator' ? 'Type a message...' : (hasGuessed ? 'You guessed correctly!' : 'Type a guess...'))"
                                         class="flex-1 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                     <button v-if="!isMobileView" @click="sendChat" @mousedown.prevent
                                         :disabled="hasGuessed && gameStateData.phase === 'DRAWING'"
@@ -717,16 +705,21 @@
                                     Players ({{ players.length }})</h3>
                                 <ul class="space-y-1.5 overflow-y-auto flex-1 pr-1">
                                     <li v-for="p in players" :key="p.nickname"
-                                        class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded-xl transition-colors duration-300"
-                                        :class="{'opacity-60': gameState === 'playing' && !p.connected}">
+                                        class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded-xl transition-all duration-300 border-2 border-transparent"
+                                        :class="{
+                                            'opacity-60': !p.connected,
+                                            'opacity-40': p.is_spectator,
+                                            'border-green-500 shadow-lg shadow-green-500/30': p.has_guessed_correctly && gameStateData.phase === 'DRAWING',
+                                            'animate-player-shake border-red-500 shadow-lg shadow-red-500/30': playersWithIncorrectGuess.has(p.nickname) && gameStateData.phase === 'DRAWING'
+                                        }">
                                         <div class="flex items-center gap-2">
                                             <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white relative shadow-md"
-                                                :style="{backgroundColor: p.color}">
+                                                :style="{backgroundColor: p.color, opacity: p.is_spectator ? 0.5 : 1}">
                                                 {{ p.nickname[0] }}
                                                 <span v-if="p.is_host"
                                                     class="absolute -top-1 -right-1 text-xs">👑</span>
                                             </div>
-                                            <span class="truncate max-w-[100px] font-bold" :style="{color: p.color}">{{
+                                            <span class="truncate max-w-[100px] font-bold" :style="{color: p.color, opacity: p.is_spectator ? 0.5 : 1}">{{
                                                 p.nickname }}</span>
                                         </div>
 
@@ -736,9 +729,13 @@
                                             <!-- Show ready checkmark only in lobby -->
                                             <span v-if="gameState === 'lobby' && p.is_ready"
                                                 class="text-green-500 text-xl">✓</span>
-                                            <!-- Show disconnected status during game -->
-                                            <span v-if="gameState === 'playing' && !p.connected"
-                                                class="text-red-500 text-xs font-bold uppercase tracking-wider">⚠️</span>
+                                            <!-- Show disconnected icon when player is disconnected -->
+                                            <span v-if="!p.connected"
+                                                class="text-red-500 text-xs" title="Disconnected">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.464-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+                                                </svg>
+                                            </span>
                                         </div>
                                     </li>
                                 </ul>
@@ -747,265 +744,214 @@
                     </div>
                 </div>
 
-                <!-- Leave Modal -->
-                <div v-if="showLeaveModal"
-                    class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md">
-                    <div
-                        class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-slide-in border border-gray-100 dark:border-gray-700 text-center">
-                        <div class="mb-4 text-red-500 dark:text-red-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none"
-                                viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">End
-                            the Game?</h3>
-                        <p class="text-gray-600 dark:text-gray-300 mb-8 font-medium">
-                            You are the host. leaving will <span class="text-red-500 dark:text-red-400 font-bold">close
-                                the room</span> for everyone.
-                        </p>
-                        <div class="flex flex-col space-y-3">
-                            <button @click="confirmHostLeave"
-                                class="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-black rounded-xl shadow-lg hover:shadow-red-500/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
-                                Close Room
-                            </button>
-                            <button @click="showLeaveModal = false"
-                                class="w-full py-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 font-bold rounded-xl transition-colors uppercase tracking-widest text-sm">
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Password Modal -->
-
-
-
-
-                <!-- Overlay: Round End / Game Over (Fixed Full-Screen) -->
-                <div v-if="gameStateData.phase === 'POST_ROUND' || gameStateData.phase === 'GAME_OVER'"
-                    class="fixed inset-0 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-[60] text-center p-4">
-                    <h2
-                        class="text-5xl font-black text-gray-900 dark:text-white mb-2 drop-shadow-lg uppercase tracking-tighter">
-                        {{ gameStateData.phase ===
-                        'GAME_OVER' ?
-                        'GAME OVER!' : 'Round Over!' }}</h2>
-                    <p class="text-xl text-gray-600 dark:text-gray-300 mb-6 font-bold uppercase tracking-widest">The
-                        word was: <span class="text-green-600 dark:text-green-400 font-black">{{
-                            gameStateData.word }}</span></p>
-
-                    <div
-                        class="bg-white dark:bg-gray-800 p-8 rounded-3xl w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700 overflow-y-auto max-h-[90vh]">
-                        <div v-if="sortedPlayers.length > 0"
-                            class="mb-8 text-center bg-yellow-50 dark:bg-yellow-500/10 p-4 rounded-2xl border-2 border-yellow-200 dark:border-yellow-500/20">
-                            <div
-                                class="text-[10px] text-yellow-600 dark:text-yellow-400 font-black uppercase tracking-widest mb-1">
-                                Winner
-                            </div>
-                            <div
-                                class="text-4xl font-black text-yellow-600 dark:text-yellow-400 flex items-center justify-center gap-3">
-                                <span>🏆</span> {{ sortedPlayers[0].nickname }}
-                            </div>
-                            <div class="text-gray-700 dark:text-white font-black mt-1 text-xl">{{
-                                sortedPlayers[0].score
-                                }} pts</div>
-                        </div>
-
-                        <h3
-                            class="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4">
-                            Leaderboard</h3>
-                        <ul class="space-y-2">
-                            <li v-for="(p, idx) in sortedPlayers" :key="p.nickname"
-                                class="flex justify-between items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent"
-                                :class="idx === 0 ? 'border-yellow-500/50 bg-yellow-50/50 dark:bg-gray-700/80' : ''">
-                                <div class="flex items-center gap-3">
-                                    <span class="font-mono text-gray-400 dark:text-gray-500 w-4 text-right font-bold">{{
-                                        idx + 1
-                                        }}</span>
-                                    <span
-                                        :class="idx === 0 ? 'font-black text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 font-bold'">{{
-                                        p.nickname }}</span>
-                                </div>
-                                <span class="font-black"
-                                    :class="idx === 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-400'">{{
-                                    p.score
-                                    }}</span>
-                            </li>
-                        </ul>
-                        <button v-if="amIHost" @click="startGame"
-                            class="mt-8 w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl hover:shadow-blue-500/20 transition-all active:scale-95 text-lg">
-                            Play Again
-                        </button>
-                        <button @click="handleLeaveRequest"
-                            class="mt-4 w-full text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 font-bold py-2 transition-colors text-sm uppercase tracking-widest">
-                            Leave Room
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Results Modal -->
-                <div v-if="gameStateData.phase === 'DRAWER_PREPARING'"
-                    class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-black/80 backdrop-blur-md p-4">
-                    <div
-                        class="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden transform transition-all">
-                        <div
-                            class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-start gap-4 bg-gray-50 dark:bg-gray-900/50">
-                            <button @click="handleLeaveRequest"
-                                class="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transform -scale-x-100 mt-1"
-                                title="Leave Room">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                            </button>
-                            <div class="flex-1">
-                                <h2
-                                    class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-wider leading-none">
-                                    Next Up: <span class="text-[#ea5128]">{{ gameStateData.drawer }}</span>
-                                </h2>
-                                <p v-if="gameStateData.last_drawer"
-                                    class="text-[#ea5128] text-sm font-bold flex items-center gap-1 mt-1">
-                                    <span class="text-gray-500 dark:text-gray-400">{{ gameStateData.last_drawer
-                                        }}</span> was drawing
-                                    <span
-                                        class="text-gray-900 dark:text-white uppercase tracking-widest px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{{
-                                        gameStateData.last_word }}</span>
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="p-6 space-y-4 max-h-[50vh] overflow-y-auto bg-white dark:bg-gray-800">
-                            <transition-group name="results-list" tag="div" class="space-y-4">
-                                <div v-for="(res, idx) in animatedResults" :key="res.nickname"
-                                    class="relative flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-2xl border-2 transition-all duration-500 animate-slide-in"
-                                    :class="res.nickname === gameStateData.last_drawer ? 'border-yellow-500/50 shadow-lg' : 'border-transparent'"
-                                    :style="{ animationDelay: (idx * 0.1) + 's' }">
-
-                                    <div class="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-xl font-black text-white shadow-xl relative"
-                                        :style="{ backgroundColor: getPlayerColor(res.nickname) }">
-                                        {{ res.nickname[0] }}
-                                        <!-- Rank Badge -->
-                                        <div v-if="getRank(res.nickname)"
-                                            class="absolute -top-2 -left-2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] text-black font-black border-2 border-white dark:border-gray-800 shadow-md">
-                                            #{{ getRank(res.nickname) }}
-                                        </div>
-                                    </div>
-
-                                    <div class="flex-1">
-                                        <div class="flex justify-between items-end mb-1">
-                                            <span class="font-black text-gray-800 dark:text-gray-200 text-lg">{{
-                                                res.nickname }} <span v-if="res.nickname === gameStateData.last_drawer"
-                                                    class="text-xs text-[#ea5128] italic font-bold">(Drawer)</span></span>
-                                            <span v-if="gameStateData.last_drawer"
-                                                class="text-green-600 dark:text-green-400 font-black text-2xl animate-pulse">+{{
-                                                res.points
-                                                }}</span>
-                                        </div>
-                                        <div
-                                            class="relative h-4 w-full bg-gray-200 dark:bg-gray-900 rounded-full overflow-hidden flex shadow-inner">
-                                            <!-- Base Score Segment -->
-                                            <div class="h-full bg-[#ea5128]/60 transition-all duration-500 ease-out"
-                                                :style="{ width: getBaseScorePercentage(res.nickname) + '%' }">
-                                            </div>
-                                            <!-- New Points Segment -->
-                                            <div class="h-full bg-[#ea5128] transition-all duration-500 ease-out fill-animation border-l border-white/20"
-                                                :style="{ width: getNewPointsPercentage(res.nickname) + '%' }">
-                                            </div>
-                                        </div>
-                                        <div class="flex justify-between mt-1 pt-1">
-                                            <span
-                                                class="text-xs text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">Total:
-                                                <span class="text-gray-900 dark:text-white">{{
-                                                    getBaseScore(res.nickname) +
-                                                    res.points }}</span></span>
-                                            <span v-if="res.nickname === gameStateData.last_drawer"
-                                                class="text-[10px] text-gray-400 italic">
-                                                guessed in {{ res.time }}s
-                                            </span>
-                                            <span v-else-if="res.time"
-                                                class="text-[10px] text-gray-400 italic font-bold">Guessed in
-                                                {{
-                                                res.time }}s</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </transition-group>
-                        </div>
-
-                        <div class="p-8 bg-gray-50 dark:bg-gray-900/50 text-center flex flex-col items-center gap-6">
-                            <p v-if="gameStateData.phase === 'DRAWER_PREPARING' && amIDrawing"
-                                class="text-gray-600 dark:text-gray-400 text-xs font-black uppercase tracking-[0.2em] mb-[-1rem]">
-                                Your word is
-                            </p>
-                            <div v-if="gameStateData.phase === 'DRAWER_PREPARING' && amIDrawing"
-                                class="text-4xl font-black text-[#ea5128] uppercase tracking-tighter mb-2">
-                                {{ gameStateData.word }}
-                            </div>
-
-                            <div v-if="gameStateData.phase === 'DRAWER_PREPARING'" class="w-full">
-                                <template v-if="amIDrawing">
-                                    <button @click="startActiveRound"
-                                        class="w-full py-5 bg-green-600 hover:bg-green-500 text-white rounded-2xl font-black text-2xl shadow-xl hover:shadow-green-500/20 transition-all animate-bounce-subtle">
-                                        START ROUND!
-                                    </button>
-                                </template>
-                                <template v-else>
-                                    <div
-                                        class="flex items-center justify-center gap-4 py-4 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-lg">
-                                        <svg class="animate-spin h-6 w-6 text-[#ea5128]"
-                                            xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                                stroke-width="4"></circle>
-                                            <path class="opacity-75" fill="currentColor"
-                                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
-                                            </path>
-                                        </svg>
-                                        <span class="font-black uppercase tracking-widest text-sm">Wait for <span
-                                                class="text-[#ea5128]">{{
-                                                gameStateData.drawer }}</span></span>
-                                    </div>
-                                </template>
-                            </div>
-                            <div v-else class="text-gray-500 text-xs font-black uppercase tracking-[0.3em]">
-                                Preparing...
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </transition>
 
-        <!-- Password Modal -->
-        <div v-if="showPasswordModal"
-            class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md">
+        <!-- Host Disconnected Modal -->
+        <div v-if="isHostDisconnected"
+            class="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
             <div
-                class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-sm w-full animate-slide-in border border-gray-100 dark:border-gray-700 text-center">
-                <div class="mb-4 text-[#ea5128]">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24"
+                class="bg-gray-900 text-white rounded-3xl p-8 max-w-md w-full text-center border border-gray-700 shadow-2xl animate-pulse">
+                <div class="mb-6 text-yellow-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
-                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">Room
-                    Locked</h3>
-                <p class="text-gray-600 dark:text-gray-300 mb-6 font-medium">
-                    Please enter the password to join this room.
+                <h3 class="text-3xl font-black mb-4 uppercase tracking-wider">Game Paused</h3>
+                <p class="text-gray-300 text-lg mb-8">
+                    The Host has disconnected. Waiting for them to reconnect...
                 </p>
-                <input id="join-password-input" v-model="joinPassword" type="password" @keyup.enter="submitPassword"
-                    placeholder="Password"
-                    class="w-full p-3 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white mb-6 border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300 text-center font-bold">
-                <div class="flex flex-col space-y-3">
-                    <button @click="submitPassword"
-                        class="w-full py-3 bg-[#ea5128] hover:bg-[#c1381b] text-white font-black rounded-xl shadow-lg hover:shadow-[#ea5128]/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
-                        Join Room
+                <div class="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-yellow-500 animate-progress"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overlay: Game Over (🏆 Trophy Overlay) -->
+        <div v-if="gameStateData.phase === 'GAME_OVER'"
+            class="fixed inset-0 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-[60] text-center p-4">
+            <h2
+                class="text-5xl font-black text-gray-900 dark:text-white mb-2 drop-shadow-lg uppercase tracking-tighter">
+                GAME OVER!</h2>
+            <p class="text-xl text-gray-600 dark:text-gray-300 mb-6 font-bold uppercase tracking-widest">The
+                word was: <span class="text-green-600 dark:text-green-400 font-black">{{
+                    gameStateData.word }}</span></p>
+
+            <div
+                class="bg-white dark:bg-gray-800 p-8 rounded-3xl w-full max-w-sm shadow-2xl border border-gray-100 dark:border-gray-700 overflow-y-auto max-h-[90vh]">
+                <!-- Winner Banner -->
+                <div v-if="sortedPlayers.length > 0"
+                    class="mb-8 text-center bg-yellow-50 dark:bg-yellow-500/10 p-4 rounded-2xl border-2 border-yellow-200 dark:border-yellow-500/20">
+                    <div
+                        class="text-[10px] text-yellow-600 dark:text-yellow-400 font-black uppercase tracking-widest mb-1">
+                        Winner
+                    </div>
+                    <div
+                        class="text-4xl font-black text-yellow-600 dark:text-yellow-400 flex items-center justify-center gap-3">
+                        <span>🏆</span> {{ sortedPlayers[0].nickname }}
+                    </div>
+                    <div class="text-gray-700 dark:text-white font-black mt-1 text-xl">{{
+                        sortedPlayers[0].score
+                        }} pts</div>
+                </div>
+
+                <h3 class="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4">
+                    Leaderboard</h3>
+                <ul class="space-y-2">
+                    <li v-for="(p, idx) in sortedPlayers" :key="p.nickname"
+                        class="flex justify-between items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent"
+                        :class="idx === 0 ? 'border-yellow-500/50 bg-yellow-50/50 dark:bg-gray-700/80' : ''">
+                        <div class="flex items-center gap-3">
+                            <span class="font-mono text-gray-400 dark:text-gray-500 w-4 text-right font-bold">{{
+                                idx + 1
+                                }}</span>
+                            <span
+                                :class="idx === 0 ? 'font-black text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 font-bold'">{{
+                                p.nickname }}</span>
+                        </div>
+                        <span class="font-black"
+                            :class="idx === 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-400'">{{
+                            p.score
+                            }}</span>
+                    </li>
+                </ul>
+                <button v-if="amIHost" @click="startGame"
+                    class="mt-8 w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl hover:shadow-blue-500/20 transition-all active:scale-95 text-lg">
+                    Play Again
+                </button>
+                <button @click="handleLeaveRequest"
+                    class="mt-4 w-full text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 font-bold py-2 transition-colors text-sm uppercase tracking-widest">
+                    Leave Room
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Modal (Animated Bars for DRAWER_PREPARING) -->
+        <div v-if="gameStateData.phase === 'DRAWER_PREPARING'"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-black/80 backdrop-blur-md p-4">
+            <div
+                class="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden transform transition-all">
+                <div
+                    class="p-4 border-b border-gray-100 dark:border-gray-700 flex items-start gap-4 bg-gray-50 dark:bg-gray-900/50">
+                    <button @click="handleLeaveRequest"
+                        class="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transform -scale-x-100 mt-1"
+                        title="Leave Room">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                        </svg>
                     </button>
-                    <button @click="cancelPasswordJoin"
-                        class="w-full py-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 font-bold rounded-xl transition-colors uppercase tracking-widest text-sm">
-                        Cancel
-                    </button>
+                    <div class="flex-1">
+                        <h2
+                            class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-wider leading-none">
+                            Next Up: <span class="text-[#ea5128]">{{ gameStateData.drawer }}</span>
+                        </h2>
+                        <p v-if="gameStateData.phase === 'DRAWER_PREPARING' && gameStateData.last_drawer"
+                            class="text-[#ea5128] text-sm font-bold flex items-center gap-1 mt-1">
+                            <span class="text-gray-500 dark:text-gray-400">{{ gameStateData.last_drawer
+                                }}</span> was drawing
+                            <span
+                                class="text-gray-900 dark:text-white uppercase tracking-widest px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{{
+                                gameStateData.last_word }}</span>
+                        </p>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-4 max-h-[50vh] overflow-y-auto bg-white dark:bg-gray-800">
+                    <transition-group name="results-list" tag="div" class="space-y-4">
+                        <div v-for="(res, idx) in animatedResults" :key="res.nickname"
+                            class="relative flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-2xl border-2 transition-all duration-500 animate-slide-in"
+                            :class="res.nickname === gameStateData.last_drawer ? 'border-yellow-500/50 shadow-lg' : 'border-transparent'"
+                            :style="{ animationDelay: (idx * 0.1) + 's' }">
+
+                            <div class="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-xl font-black text-white shadow-xl relative"
+                                :style="{ backgroundColor: getPlayerColor(res.nickname) }">
+                                {{ res.nickname[0] }}
+                                <!-- Rank Badge -->
+                                <div v-if="getRank(res.nickname)"
+                                    class="absolute -top-2 -left-2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] text-black font-black border-2 border-white dark:border-gray-800 shadow-md">
+                                    #{{ getRank(res.nickname) }}
+                                </div>
+                            </div>
+
+                            <div class="flex-1">
+                                <div class="flex justify-between items-end mb-1">
+                                    <span class="font-black text-gray-800 dark:text-gray-200 text-lg">{{
+                                        res.nickname }} <span v-if="res.nickname === gameStateData.last_drawer"
+                                            class="text-xs text-[#ea5128] italic font-bold">(Drawer)</span></span>
+                                    <span v-if="gameStateData.last_drawer"
+                                        class="text-green-600 dark:text-green-400 font-black text-2xl animate-pulse">+{{
+                                        res.points
+                                        }}</span>
+                                </div>
+                                <div
+                                    class="relative h-4 w-full bg-gray-200 dark:bg-gray-900 rounded-full overflow-hidden flex shadow-inner">
+                                    <!-- Base Score Segment -->
+                                    <div class="h-full bg-[#ea5128]/60 transition-all duration-500 ease-out"
+                                        :style="{ width: getBaseScorePercentage(res.nickname) + '%' }">
+                                    </div>
+                                    <!-- New Points Segment -->
+                                    <div class="h-full bg-[#ea5128] transition-all duration-500 ease-out fill-animation border-l border-white/20"
+                                        :style="{ width: getNewPointsPercentage(res.nickname) + '%' }">
+                                    </div>
+                                </div>
+                                <div class="flex justify-between mt-1 pt-1">
+                                    <span
+                                        class="text-xs text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">Total:
+                                        <span class="text-gray-900 dark:text-white">{{
+                                            getBaseScore(res.nickname) +
+                                            res.points }}</span></span>
+                                    <span v-if="res.nickname === gameStateData.last_drawer"
+                                        class="text-[10px] text-gray-400 italic">
+                                        guessed in {{ res.time }}s
+                                    </span>
+                                    <span v-else-if="res.time"
+                                        class="text-[10px] text-gray-400 italic font-bold">Guessed in
+                                        {{
+                                        res.time }}s</span>
+                                </div>
+                            </div>
+                        </div>
+                    </transition-group>
+                </div>
+
+                <div class="p-8 bg-gray-50 dark:bg-gray-900/50 text-center flex flex-col items-center gap-6">
+                    <p v-if="gameStateData.phase === 'DRAWER_PREPARING' && amIDrawing"
+                        class="text-gray-600 dark:text-gray-400 text-xs font-black uppercase tracking-[0.2em] mb-[-1rem]">
+                        Your word is
+                    </p>
+                    <div v-if="gameStateData.phase === 'DRAWER_PREPARING' && amIDrawing"
+                        class="text-4xl font-black text-[#ea5128] uppercase tracking-tighter mb-2">
+                        {{ gameStateData.word }}
+                    </div>
+
+                    <div v-if="gameStateData.phase === 'DRAWER_PREPARING'" class="w-full">
+                        <template v-if="amIDrawing">
+                            <button @click="startActiveRound"
+                                class="w-full py-5 bg-green-600 hover:bg-green-500 text-white rounded-2xl font-black text-2xl shadow-xl hover:shadow-green-500/20 transition-all animate-bounce-subtle">
+                                START ROUND!
+                            </button>
+                        </template>
+                        <template v-else>
+                            <div
+                                class="flex items-center justify-center gap-4 py-4 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-lg">
+                                <svg class="animate-spin h-6 w-6 text-[#ea5128]" xmlns="http://www.w3.org/2000/svg"
+                                    fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                                    </path>
+                                </svg>
+                                <span class="font-black uppercase tracking-widest text-sm">Wait for <span
+                                        class="text-[#ea5128]">{{
+                                        gameStateData.drawer }}</span></span>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1053,6 +999,66 @@
             </div>
         </div>
 
+        <!-- Leave Confirmation Modal -->
+        <div v-if="showLeaveModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-sm w-full border border-gray-100 dark:border-gray-700 text-center animate-slide-in">
+                <div class="mb-4 text-red-500 dark:text-red-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">End Session?
+                </h3>
+                <p class="text-gray-600 dark:text-gray-300 mb-8 font-medium italic">
+                    As the host, leaving will close this room for all players.
+                </p>
+                <div class="flex flex-col space-y-3">
+                    <button @click="confirmHostLeave"
+                        class="w-full py-4 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl shadow-lg hover:shadow-red-500/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
+                        LEAVE & CLOSE ROOM
+                    </button>
+                    <button @click="showLeaveModal = false"
+                        class="w-full py-4 text-gray-500 dark:text-gray-400 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all uppercase tracking-widest text-sm">
+                        STAY IN GAME
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Player Leave During Game Modal -->
+        <div v-if="showPlayerLeaveModal"
+            class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl p-8 max-w-sm w-full border border-gray-100 dark:border-gray-700 text-center animate-slide-in">
+                <div class="mb-4 text-orange-500 dark:text-orange-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">Leave Game?
+                </h3>
+                <p class="text-gray-600 dark:text-gray-300 mb-8 font-medium italic">
+                    You will be unable to reconnect to this game once you leave. Are you sure?
+                </p>
+                <div class="flex flex-col space-y-3">
+                    <button @click="confirmPlayerLeave"
+                        class="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-xl shadow-lg hover:shadow-orange-500/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
+                        LEAVE GAME
+                    </button>
+                    <button @click="showPlayerLeaveModal = false"
+                        class="w-full py-4 text-gray-500 dark:text-gray-400 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all uppercase tracking-widest text-sm">
+                        STAY IN GAME
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Notifications Overlay -->
         <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
             <transition-group name="notification">
@@ -1076,1039 +1082,8 @@
 
     </div>
 
-    <script>
-        const { createApp } = Vue
 
-        createApp({
-            data() {
-                return {
-                    view: 'login', // login, lobby, room
-                    nickname: '',
-                    nicknameInput: '',
-                    isEditingNickname: false,
-
-                    // Lobby
-                    rooms: [],
-                    newRoomName: '',
-                    newRoomPassword: '',
-                    selectedGameType: 'drawing',
-
-                    // Room / Game
-                    currentRoomId: null,
-                    joinPassword: '',
-                    showPasswordModal: false,
-                    roomToken: null,
-                    socket: null,
-                    players: [],
-                    messages: [],
-                    chatInput: '',
-                    clientId: Math.random().toString(36).substr(2, 9),
-                    gameState: 'lobby', // lobby, playing
-                    isInputFocused: false,
-                    isMobileView: false,
-                    gameConfig: {
-                        round_duration: 60,
-                        points_to_win: 50,
-                        base_points: 10,
-                        turn_order: 'sequence',
-                        points_to_win: 50,
-                        base_points: 10,
-                        turn_order: 'sequence',
-                        host_plays: true,
-                        word_language: '',
-                        word_difficulty: ''
-                    },
-                    configTimeout: null,
-                    wordSetMetadata: {
-                        languages: {},
-                        difficulties: {}
-                    },
-
-                    // Game State
-                    gameStateData: {
-                        round: 0,
-                        drawer: null,
-                        phase: 'PRE_ROUND',
-                        timer_end: 0,
-                        time_left: 0,
-                        word: '',
-                        word_hints: '',
-                        scores: {},
-                        correct_guessers: []
-                    },
-                    timeLeft: 0,
-                    localTimerEnd: 0,
-                    timerInterval: null,
-
-                    // Canvas
-                    ctx: null,
-                    isDrawing: false,
-                    lastX: 0,
-                    lastY: 0,
-                    currentBrushColor: '#000000',
-                    drawColors: ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFFFFF', '#8B4513', '#FFA500'],
-                    strokeHistory: [],
-                    currentActionId: null,
-                    // Animation & Results
-                    animatedResults: [],
-                    lastTurnResults: {},
-                    resultsScores: {}, // Local scoreboard for animation
-                    isDarkMode: true, // Default to dark mode
-                    resultsScores: {}, // Local scoreboard for animation
-                    isDarkMode: true, // Default to dark mode
-                    notifications: [],
-                    isShaking: false,
-                    showLeaveModal: false,
-                    showInviteModal: false,
-                    inviteLink: '',
-                    linkCopied: false,
-                    pendingRoomJoin: null // {roomId, token} from URL params
-                }
-            },
-            computed: {
-                amIHost() {
-                    const p = this.players.find(p => p.nickname === this.nickname);
-                    return p ? p.is_host : false;
-                },
-                amIReady() {
-                    const p = this.players.find(p => p.nickname === this.nickname);
-                    return p ? p.is_ready : false;
-                },
-                canStart() {
-                    if (this.players.length < 2) return false;
-                    const hostPlays = this.gameConfig.host_plays;
-                    const playing = this.players.filter(p => !p.is_host || hostPlays);
-                    // Need at least 2 playing players? Or just 2 total connections?
-                    // Server check: need 2 playing players.
-                    // If Host Spectates: Need 2 OTHER players.
-                    // If Host Plays: Need 1 OTHER player (Total 2).
-                    // This visual check is approx, server is authority.
-                    return this.players.every(p => p.is_ready);
-                },
-                amIDrawing() {
-                    return this.gameStateData.drawer === this.nickname;
-                },
-                hasGuessed() {
-                    return this.gameStateData.correct_guessers && this.gameStateData.correct_guessers.includes(this.nickname);
-                },
-                sortedPlayers() {
-                    return [...this.players].sort((a, b) => b.score - a.score);
-                },
-                dynamicFontSize() {
-                    const word = this.amIDrawing ? this.gameStateData.word : this.gameStateData.word_hints;
-                    if (!word) return 24;
-                    const len = word.length;
-                    if (len === 0) return 24;
-
-                    // Estimate available width for the word/hints section
-                    // We need to fit between the timer and the side badges/logo
-                    const availableWidth = this.isMobileView ? 110 : 350;
-
-                    // Base calculation: width divided by length with a character width multiplier
-                    // More conservative multiplier (0.9 instead of 0.7) to scale down earlier
-                    let size = Math.floor(availableWidth / (len * 0.8));
-
-                    const minSize = this.isMobileView ? 6 : 10;
-                    const maxSize = this.isMobileView ? 18 : 28;
-
-                    return Math.max(minSize, Math.min(maxSize, size));
-                },
-                hintCharStyle() {
-                    const totalChars = this.gameStateData.word_hints ? this.gameStateData.word_hints.length : 0;
-                    if (totalChars === 0) return {};
-
-                    const size = this.dynamicFontSize;
-                    return {
-                        fontSize: `${size}px`,
-                        width: `${Math.max(4, size * 0.7)}px`,
-                        height: `${size * 1.3}px`,
-                        borderBottomWidth: `${Math.max(1, size / 8)}px`,
-                        marginBottom: '1px'
-                    };
-                },
-                availableDifficulties() {
-                    const lang = this.gameConfig.word_language;
-                    const diffs = this.wordSetMetadata.difficulties || {};
-                    return diffs[lang] || [];
-                },
-                displayedMessages() {
-                    if (this.isMobileView) {
-                        return this.messages.slice(-3);
-                    }
-                    return this.messages;
-                },
-                totalGuessers() {
-                    const hostPlays = this.gameConfig.host_plays;
-                    return this.players.filter(p => {
-                        if (!p.connected) return false;
-                        if (p.nickname === this.gameStateData.drawer) return false;
-                        if (p.is_host && !hostPlays) return false;
-                        return true;
-                    }).length;
-                }
-            },
-            watch: {
-                gameState(newVal) {
-                    if (newVal === 'playing') {
-                        this.$nextTick(() => {
-                            this.initCanvas();
-                        });
-                    }
-                },
-                'gameConfig.word_language'(newVal) {
-                    const diffs = (this.wordSetMetadata.difficulties || {})[newVal] || [];
-                    if (diffs.length > 0 && !diffs.includes(this.gameConfig.word_difficulty)) {
-                        this.gameConfig.word_difficulty = diffs[0];
-                        this.updateConfig();
-                    } else if (diffs.length === 0) {
-                        this.gameConfig.word_difficulty = ''; // Clear difficulty if no options
-                        this.updateConfig();
-                    }
-                },
-                'gameConfig.points_to_win'(newVal) {
-                    if (this.gameConfig.base_points > newVal) {
-                        this.gameConfig.base_points = newVal;
-                        this.updateConfig();
-                    }
-                },
-                'gameStateData.phase'(newVal, oldVal) {
-                    if (newVal === 'DRAWER_PREPARING' && oldVal !== 'DRAWER_PREPARING') {
-                        this.startResultsAnimation();
-                    } else if (newVal !== 'DRAWER_PREPARING') {
-                        this.animatedResults = [];
-                    }
-                }
-            },
-            mounted() {
-                window.addEventListener('resize', this.handleResize);
-
-                // Check for invite link parameters
-                const urlParams = new URLSearchParams(window.location.search);
-                const roomParam = urlParams.get('room');
-                const tokenParam = urlParams.get('token');
-
-                if (roomParam && tokenParam) {
-                    // Store pending room join
-                    this.pendingRoomJoin = { roomId: roomParam, token: tokenParam };
-                    // Clear URL parameters
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-
-                const savedNick = localStorage.getItem('nickname');
-                const savedRoom = localStorage.getItem('roomId');
-                const savedToken = localStorage.getItem('roomToken');
-                const savedTheme = localStorage.getItem('theme');
-                if (savedTheme) {
-                    this.isDarkMode = savedTheme === 'dark';
-                } else {
-                    // Default to system preference if no saved theme
-                    this.isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                }
-                this.updateThemeClass();
-
-                if (savedNick) {
-                    this.nickname = savedNick;
-
-                    // If we have a pending invite join, use that instead of saved room
-                    if (this.pendingRoomJoin) {
-                        this.currentRoomId = this.pendingRoomJoin.roomId;
-                        this.roomToken = this.pendingRoomJoin.token;
-                        localStorage.setItem('roomId', this.currentRoomId);
-                        localStorage.setItem('roomToken', this.roomToken);
-                        this.view = 'room';
-                        this.connectWebSocket();
-                        this.pendingRoomJoin = null;
-                    } else if (savedRoom) {
-                        this.view = 'room';
-                        this.currentRoomId = savedRoom;
-                        if (savedToken) {
-                            this.roomToken = savedToken;
-                        }
-                        this.connectWebSocket();
-                    } else {
-                        this.view = 'lobby';
-                        this.fetchRooms();
-                    }
-                } else if (this.pendingRoomJoin) {
-                    // User doesn't have a nickname but has invite link - stay on login screen
-                    // After they enter nickname, we'll join the room
-                    this.view = 'login';
-                }
-                this.checkMobile();
-                this.fetchWordSetMetadata();
-            },
-            methods: {
-                fetchWordSetMetadata() {
-                    fetch('/api/word-sets/metadata')
-                        .then(r => r.json())
-                        .then(data => {
-                            this.wordSetMetadata = data;
-
-                            // Initialize defaults if not set or invalid
-                            const languages = data.languages || {};
-                            const difficulties = data.difficulties || {};
-
-                            if (Object.keys(languages).length > 0) {
-                                if (!this.gameConfig.word_language || !languages[this.gameConfig.word_language]) {
-                                    this.gameConfig.word_language = Object.keys(languages)[0];
-                                }
-
-                                const lang = this.gameConfig.word_language;
-                                const diffs = difficulties[lang] || [];
-                                if (!this.gameConfig.word_difficulty || !diffs.includes(this.gameConfig.word_difficulty)) {
-                                    this.gameConfig.word_difficulty = diffs[0] || '';
-                                }
-                            }
-                        });
-                },
-                checkMobile() {
-                    this.isMobileView = window.innerWidth < 1024; // Align with lg: grid breakpoint or sm:
-                },
-                handleInputFocus() {
-                    this.isInputFocused = true;
-                    if (this.isMobileView) {
-                        setTimeout(() => {
-                            const app = document.getElementById('app');
-                            if (app) app.scrollTop = 0;
-                            window.scrollTo(0, 0);
-                        }, 100);
-                    }
-                },
-                handleInputBlur() {
-                    this.isInputFocused = false;
-                },
-                generateRandomName() {
-                    // Check if unique-names-generator is available
-                    if (typeof window.uniqueNamesGenerator !== 'undefined') {
-                        const { uniqueNamesGenerator: generate, adjectives, animals } = window.uniqueNamesGenerator;
-                        let randomName = '';
-                        let attempts = 0;
-
-                        // Try to get a name within 20 chars, max 5 attempts
-                        do {
-                            randomName = generate({
-                                dictionaries: [adjectives, animals],
-                                separator: '-',
-                                length: 2,
-                                style: 'lowerCase'
-                            });
-                            attempts++;
-                        } while (randomName.length > 20 && attempts < 5);
-
-                        this.nicknameInput = randomName.slice(0, 20);
-                    } else {
-                        // Fallback if library doesn't load
-                        const adjectives = ['happy', 'silly', 'brave', 'clever', 'swift', 'mighty', 'gentle', 'wild'];
-                        const nouns = ['panda', 'tiger', 'eagle', 'dolphin', 'fox', 'wolf', 'bear', 'owl'];
-                        const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
-                        const noun = nouns[Math.floor(Math.random() * nouns.length)];
-                        this.nicknameInput = `${adj}-${noun}`.slice(0, 20);
-                    }
-                },
-                setNickname() {
-                    if (!this.nicknameInput.trim()) return;
-                    this.nickname = this.nicknameInput.trim();
-                    localStorage.setItem('nickname', this.nickname);
-
-                    // Check if user came from invite link
-                    if (this.pendingRoomJoin) {
-                        this.currentRoomId = this.pendingRoomJoin.roomId;
-                        this.roomToken = this.pendingRoomJoin.token;
-                        localStorage.setItem('roomId', this.currentRoomId);
-                        localStorage.setItem('roomToken', this.roomToken);
-                        this.view = 'room';
-                        this.connectWebSocket();
-                        this.pendingRoomJoin = null;
-                    } else {
-                        this.view = 'lobby';
-                        this.fetchRooms();
-                    }
-                },
-                startEditingNickname() {
-                    this.nicknameInput = this.nickname;
-                    this.isEditingNickname = true;
-                },
-                saveNickname() {
-                    const newNick = this.nicknameInput.trim();
-                    if (newNick && newNick !== this.nickname) {
-                        this.nickname = newNick;
-                        localStorage.setItem('nickname', this.nickname);
-                    }
-                    this.isEditingNickname = false;
-                },
-                cancelEditingNickname() {
-                    this.isEditingNickname = false;
-                },
-                async fetchRooms() {
-                    try {
-                        const res = await fetch('/api/rooms');
-                        this.rooms = await res.json();
-                    } catch (e) { console.error("Failed to fetch rooms", e); }
-                },
-                async createRoom() {
-                    if (!this.newRoomName.trim()) return;
-                    try {
-                        const res = await fetch('/api/rooms', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                name: this.newRoomName,
-                                password: this.newRoomPassword || null,
-                                game_type: this.selectedGameType,
-                                config: this.gameConfig
-                            })
-                        });
-                        const data = await res.json();
-                        if (!res.ok) {
-                            this.showNotification(data.message || "Failed to create room");
-                            return;
-                        }
-                        // Auto-join the created room
-                        // Pass the used password to joinPassword so WS connection can use it
-                        this.joinPassword = this.newRoomPassword;
-                        this.proceedToJoin(data.room_id);
-
-                        // Clear creation inputs
-                        this.newRoomName = '';
-                        this.newRoomPassword = '';
-                    } catch (e) { console.error("Failed to create room", e); }
-                },
-                joinRoom(roomId) {
-                    // Check if room needs password
-                    const room = this.rooms.find(r => r.id === roomId);
-                    if (room && room.has_password) {
-                        this.currentRoomId = roomId;
-                        this.joinPassword = '';
-                        this.showPasswordModal = true;
-                        // Focus input next tick
-                        this.$nextTick(() => {
-                            const input = document.getElementById('join-password-input');
-                            if (input) input.focus();
-                        });
-                        return;
-                    }
-                    this.proceedToJoin(roomId);
-                },
-                submitPassword() {
-                    this.showPasswordModal = false;
-                    this.proceedToJoin(this.currentRoomId);
-                },
-                cancelPasswordJoin() {
-                    this.showPasswordModal = false;
-                    this.currentRoomId = null;
-                    this.joinPassword = '';
-                },
-                proceedToJoin(roomId) {
-                    this.currentRoomId = roomId;
-                    localStorage.setItem('roomId', roomId);
-                    // Do NOT save password here. 
-                    // Wait for JOIN_SUCCESS to save token.
-                    this.view = 'room';
-                    this.connectWebSocket();
-                },
-                handleLeaveRequest() {
-                    if (this.amIHost) {
-                        this.showLeaveModal = true;
-                    } else {
-                        this.leaveRoom();
-                    }
-                },
-                confirmHostLeave() {
-                    this.showLeaveModal = false;
-                    this.leaveRoom();
-                },
-                openInviteModal() {
-                    if (!this.currentRoomId || !this.roomToken) {
-                        this.showNotification('Unable to generate invite link', 'error');
-                        return;
-                    }
-
-                    // Generate invite link
-                    const baseUrl = window.location.origin;
-                    this.inviteLink = `${baseUrl}/?room=${this.currentRoomId}&token=${this.roomToken}`;
-                    this.linkCopied = false;
-                    this.showInviteModal = true;
-
-                    // Generate QR code after modal is rendered
-                    this.$nextTick(() => {
-                        this.generateQRCode();
-                    });
-                },
-                generateQRCode() {
-                    const container = document.getElementById('qrcode-container');
-                    if (container && typeof QRCode !== 'undefined') {
-                        // Clear previous QR code
-                        container.innerHTML = '';
-
-                        // Generate new QR code
-                        new QRCode(container, {
-                            text: this.inviteLink,
-                            width: 256,
-                            height: 256,
-                            colorDark: '#000000',
-                            colorLight: '#ffffff',
-                            correctLevel: QRCode.CorrectLevel.H
-                        });
-                    }
-                },
-                async copyInviteLink() {
-                    try {
-                        await navigator.clipboard.writeText(this.inviteLink);
-                        this.linkCopied = true;
-                        setTimeout(() => {
-                            this.linkCopied = false;
-                        }, 2000);
-                    } catch (err) {
-                        // Fallback for older browsers
-                        const input = document.createElement('input');
-                        input.value = this.inviteLink;
-                        document.body.appendChild(input);
-                        input.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(input);
-                        this.linkCopied = true;
-                        setTimeout(() => {
-                            this.linkCopied = false;
-                        }, 2000);
-                    }
-                },
-                closeInviteModal() {
-                    this.showInviteModal = false;
-                    this.inviteLink = '';
-                    this.linkCopied = false;
-                },
-                leaveRoom() {
-                    if (this.socket) {
-                        // Send explicit leave message
-                        this.socket.send(JSON.stringify({
-                            type: "LEAVE_ROOM",
-                            payload: {}
-                        }));
-                        this.socket.close();
-                        this.socket = null;
-                    }
-                    this.resetState();
-                },
-                toggleReady() {
-                    if (!this.socket) return;
-                    this.socket.send(JSON.stringify({
-                        type: "TOGGLE_READY",
-                        payload: { is_ready: !this.amIReady }
-                    }));
-                },
-                startGame() {
-                    if (!this.socket) return;
-                    this.socket.send(JSON.stringify({
-                        type: "START_GAME",
-                        payload: {}
-                    }));
-                },
-                startActiveRound() {
-                    if (!this.socket) return;
-                    this.socket.send(JSON.stringify({
-                        type: "START_ROUND",
-                        payload: {}
-                    }));
-                },
-                setTurnOrder(order) {
-                    if (!this.amIHost) return;
-                    this.gameConfig.turn_order = order;
-                    this.updateConfig();
-                },
-                toggleHostPlays() {
-                    if (!this.amIHost) return;
-                    this.gameConfig.host_plays = !this.gameConfig.host_plays;
-                    this.updateConfig();
-                },
-                updateConfig() {
-                    if (!this.amIHost || !this.socket) return;
-                    if (this.configTimeout) clearTimeout(this.configTimeout);
-                    this.configTimeout = setTimeout(() => {
-                        this.socket.send(JSON.stringify({
-                            type: "UPDATE_CONFIG",
-                            payload: { config: this.gameConfig }
-                        }));
-                    }, 300);
-                },
-                toggleTheme() {
-                    this.isDarkMode = !this.isDarkMode;
-                    localStorage.setItem('theme', this.isDarkMode ? 'dark' : 'light');
-                    this.updateThemeClass();
-                },
-                updateThemeClass() {
-                    if (this.isDarkMode) {
-                        document.documentElement.classList.add('dark');
-                    } else {
-                        document.documentElement.classList.remove('dark');
-                    }
-                },
-
-                // --- Canvas ---
-                initCanvas() {
-                    const canvas = this.$refs.gameCanvas;
-                    if (!canvas) {
-                        // Retry shortly if the ref isn't available yet
-                        setTimeout(() => this.initCanvas(), 50);
-                        return;
-                    }
-
-                    // Use a high-quality fixed internal resolution for consistent coordinate mapping
-                    canvas.width = 2000;
-                    canvas.height = 1500;
-
-                    this.ctx = canvas.getContext('2d');
-                    this.ctx.lineCap = 'round';
-                    this.ctx.lineJoin = 'round';
-                    this.ctx.lineWidth = 15;
-
-                    // Mouse
-                    canvas.addEventListener('mousedown', this.startDrawing);
-                    canvas.addEventListener('mousemove', this.draw);
-                    canvas.addEventListener('mouseup', this.stopDrawing);
-                    canvas.addEventListener('mouseout', this.stopDrawing);
-
-                    // Touch
-                    canvas.addEventListener('touchstart', (e) => {
-                        e.preventDefault();
-                        const touch = e.touches[0];
-                        const mouseEvent = new MouseEvent('mousedown', {
-                            clientX: touch.clientX,
-                            clientY: touch.clientY
-                        });
-                        canvas.dispatchEvent(mouseEvent);
-                    }, { passive: false });
-                    canvas.addEventListener('touchmove', (e) => {
-                        e.preventDefault();
-                        const touch = e.touches[0];
-                        const mouseEvent = new MouseEvent('mousemove', {
-                            clientX: touch.clientX,
-                            clientY: touch.clientY
-                        });
-                        canvas.dispatchEvent(mouseEvent);
-                    }, { passive: false });
-                    canvas.addEventListener('touchend', () => {
-                        const mouseEvent = new MouseEvent('mouseup', {});
-                        canvas.dispatchEvent(mouseEvent);
-                    });
-
-                    // Redraw if we already have history (e.g. from a sync message that arrived before init)
-                    if (this.strokeHistory.length > 0) {
-                        this.redrawFromHistory(this.strokeHistory);
-                    }
-                },
-                getPos(e) {
-                    const canvas = this.$refs.gameCanvas;
-                    const rect = canvas.getBoundingClientRect();
-                    // Crucial: Use current display dimensions (rect) to calculate fraction,
-                    // not the internal resolution (canvas.width/height).
-                    return {
-                        x: (e.clientX - rect.left) / rect.width,
-                        y: (e.clientY - rect.top) / rect.height
-                    };
-                },
-                startDrawing(e) {
-                    if (!this.amIDrawing) return;
-                    this.isDrawing = true;
-                    this.currentActionId = Math.random().toString(36).substr(2, 9);
-                    const pos = this.getPos(e);
-                    this.lastX = pos.x;
-                    this.lastY = pos.y;
-                },
-                draw(e) {
-                    if (!this.isDrawing || !this.amIDrawing) return;
-                    const pos = this.getPos(e);
-
-                    // Local Draw
-                    this.drawStroke(this.lastX, this.lastY, pos.x, pos.y, this.currentBrushColor);
-
-                    // Server Send
-                    this.socket.send(JSON.stringify({
-                        type: "DRAW_STROKE",
-                        payload: {
-                            x1: this.lastX, y1: this.lastY,
-                            x2: pos.x, y2: pos.y,
-                            color: this.currentBrushColor,
-                            actionId: this.currentActionId
-                        }
-                    }));
-
-                    this.lastX = pos.x;
-                    this.lastY = pos.y;
-                },
-                stopDrawing() {
-                    this.isDrawing = false;
-                },
-                drawStroke(x1, y1, x2, y2, color, fromHistory = false) {
-                    if (!this.ctx) {
-                        if (fromHistory) {
-                            // If drawing from history and ctx isn't ready, 
-                            // it will be picked up by initCanvas once it runs.
-                        }
-                        return;
-                    }
-                    const w = this.$refs.gameCanvas.width;
-                    const h = this.$refs.gameCanvas.height;
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(x1 * w, y1 * h);
-                    this.ctx.lineTo(x2 * w, y2 * h);
-                    this.ctx.strokeStyle = color;
-                    this.ctx.lineWidth = 15; // Ensure width is consistent
-                    this.ctx.stroke();
-
-                    if (!fromHistory) {
-                        this.strokeHistory.push({ x1, y1, x2, y2, color });
-                    }
-                },
-                setBrushColor(c) {
-                    this.currentBrushColor = c;
-                },
-                undoStroke() {
-                    if (!this.amIDrawing || !this.socket) return;
-                    this.socket.send(JSON.stringify({ type: "UNDO_STROKE", payload: {} }));
-                },
-                clearCanvas() {
-                    if (!this.amIDrawing) return;
-                    this.performClear();
-                    this.socket.send(JSON.stringify({ type: "CLEAR_CANVAS", payload: {} }));
-                },
-                performClear() {
-                    this.clearPixels();
-                    this.strokeHistory = [];
-                },
-                clearPixels() {
-                    if (!this.ctx) return;
-                    this.ctx.clearRect(0, 0, this.$refs.gameCanvas.width, this.$refs.gameCanvas.height);
-                },
-                handleResize() {
-                    this.checkMobile();
-                    if (this.gameState === 'playing' && this.$refs.gameCanvas) {
-                        this.redrawFromHistory(this.strokeHistory);
-                    }
-                },
-                redrawFromHistory(history) {
-                    this.clearPixels();
-                    if (!history) return;
-                    history.forEach(stroke => {
-                        this.drawStroke(stroke.x1, stroke.y1, stroke.x2, stroke.y2, stroke.color, true);
-                    });
-                },
-
-                // --- Connection ---
-                connectWebSocket() {
-                    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-                    const wsUrl = `${protocol}://${window.location.host}/ws/${this.currentRoomId}/${this.clientId}`;
-                    this.socket = new WebSocket(wsUrl);
-
-                    this.socket.onopen = () => {
-                        this.socket.send(JSON.stringify({
-                            type: "JOIN",
-                            payload: {
-                                nickname: this.nickname,
-                                password: this.joinPassword,
-                                token: this.roomToken
-                            }
-                        }));
-                    };
-
-                    this.socket.onmessage = (event) => {
-                        const msg = JSON.parse(event.data);
-                        this.handleMessage(msg);
-                    };
-
-                    this.socket.onclose = (event) => {
-                        console.log("Disconnected", event.code);
-                        this.socket = null; // Clear socket ref
-
-                        if (event.code === 4000) {
-                            this.showNotification("Room no longer exists", "error");
-                            this.resetState();
-                        } else if (this.view === 'room') {
-                            // Abnormal close (1006) or other interrupt.
-                            // Attempt to reconnect if we are still conceptually "in a room"
-                            console.log("Attempting reconnect...");
-                            setTimeout(() => {
-                                if (this.view === 'room' && !this.socket) {
-                                    this.connectWebSocket();
-                                }
-                            }, 2000);
-                        }
-                    };
-                },
-                startResultsAnimation() {
-                    const results = this.lastTurnResults;
-                    const players = [...this.players];
-
-                    // Initialize results scores with the values BEFORE adding points
-                    players.forEach(p => {
-                        const delta = results[p.nickname] ? results[p.nickname].points : 0;
-                        this.resultsScores[p.nickname] = p.score - delta;
-                    });
-
-                    this.animatedResults = [];
-                    const sortedNicks = players.map(p => p.nickname).sort((a, b) => {
-                        const resA = results[a] || { points: 0, time: 999 };
-                        const resB = results[b] || { points: 0, time: 999 };
-                        // Guessers first by time, then drawer
-                        if (a === this.gameStateData.drawer) return 1;
-                        if (b === this.gameStateData.drawer) return -1;
-                        return resA.time - resB.time;
-                    });
-
-                    let i = 0;
-                    const interval = setInterval(() => {
-                        if (i >= sortedNicks.length) {
-                            clearInterval(interval);
-
-                            // Re-sort results list for the ranking update
-                            setTimeout(() => {
-                                this.animatedResults.sort((a, b) => {
-                                    const totalA = this.getBaseScore(a.nickname) + a.points;
-                                    const totalB = this.getBaseScore(b.nickname) + b.points;
-                                    return totalB - totalA;
-                                });
-                                // Also re-sort main sidebar leaderboard
-                                this.players.sort((a, b) => b.score - a.score);
-                            }, 500);
-                            return;
-                        }
-                        const nick = sortedNicks[i];
-                        this.animatedResults.push({
-                            nickname: nick,
-                            points: results[nick]?.points || 0,
-                            time: results[nick]?.time || 0
-                        });
-                        i++;
-                    }, 400);
-                },
-                getPlayerColor(nickname) {
-                    const p = this.players.find(p => p.nickname === nickname);
-                    return p ? p.color : '#7C3AED';
-                },
-                getBaseScore(nickname) {
-                    return this.resultsScores[nickname] || 0;
-                },
-                getBaseScorePercentage(nickname) {
-                    const base = this.getBaseScore(nickname);
-                    const max = this.gameConfig.points_to_win || 50;
-                    return (base / max) * 100;
-                },
-                getNewPointsPercentage(nickname) {
-                    const pts = this.lastTurnResults[nickname]?.points || 0;
-                    const max = this.gameConfig.points_to_win || 50;
-                    return (pts / max) * 100;
-                },
-                getRank(nickname) {
-                    // Calculate rank based on animatedResults current order (after they are all sorted)
-                    const sorted = [...this.animatedResults].sort((a, b) => {
-                        const totalA = this.getBaseScore(a.nickname) + a.points;
-                        const totalB = this.getBaseScore(b.nickname) + b.points;
-                        return totalB - totalA;
-                    });
-                    const idx = sorted.findIndex(r => r.nickname === nickname);
-                    return idx !== -1 ? idx + 1 : null;
-                },
-                handleMessage(msg) {
-                    console.log("Received:", msg);
-                    if (msg.type === "JOIN_SUCCESS") {
-                        this.players = msg.payload.players;
-                        this.gameState = msg.payload.state || 'lobby';
-                        if (msg.payload.config) this.gameConfig = { ...this.gameConfig, ...msg.payload.config };
-
-                        // Save Token
-                        if (msg.payload.room_token) {
-                            this.roomToken = msg.payload.room_token;
-                            localStorage.setItem('roomToken', this.roomToken);
-                        }
-
-                        this.messages.push({ sender: "System", text: `Joined room. Welcome!` });
-
-                        if (this.gameState === 'playing') {
-                            // Re-join running game? Request state? 
-                            // Wait for next game_state_update...
-                        }
-                    } else if (msg.type === "PLAYER_JOINED") {
-                        const newPlayer = msg.payload;
-                        const existingIdx = this.players.findIndex(p => p.nickname === newPlayer.nickname);
-                        if (existingIdx !== -1) {
-                            // Reconnection - update existing player
-                            this.players[existingIdx].is_ready = newPlayer.is_ready;
-                            this.players[existingIdx].connected = true;
-                            // Show reconnection notification during game
-                            if (this.gameState === 'playing') {
-                                this.showNotification(`${newPlayer.nickname} reconnected`, 'success');
-                            }
-                        } else {
-                            // New player joining
-                            this.players.push({
-                                nickname: newPlayer.nickname,
-                                is_ready: newPlayer.is_ready,
-                                color: newPlayer.color,
-                                connected: true,
-                                score: 0
-                            });
-                        }
-                        this.messages.push({ sender: "System", text: `${newPlayer.nickname} joined.`, color: '#aaaaaa' });
-                    } else if (msg.type === "PLAYER_UPDATE") {
-                        const p = this.players.find(p => p.nickname === msg.payload.nickname);
-                        if (p) {
-                            p.is_ready = msg.payload.is_ready;
-                        }
-                    } else if (msg.type === "CONFIG_UPDATE") {
-                        this.gameConfig = { ...this.gameConfig, ...msg.payload.config };
-                    } else if (msg.type === "GAME_STATE_UPDATE") {
-                        this.gameState = 'playing';
-                        const oldPhase = this.gameStateData.phase;
-                        this.gameStateData = msg.payload.game_state;
-                        this.lastTurnResults = msg.payload.turn_results || {};
-
-                        // Score Sync
-                        for (const [nick, score] of Object.entries(msg.payload.scores)) {
-                            const p = this.players.find(p => p.nickname === nick);
-                            if (p) p.score = score;
-                        }
-
-                        // Timer Sync
-                        if (msg.payload.game_state.timer_end > 0) {
-                            this.localTimerEnd = msg.payload.game_state.timer_end;
-                        } else {
-                            this.localTimerEnd = 0;
-                        }
-
-                        if (this.timerInterval) clearInterval(this.timerInterval);
-                        this.updateTimer();
-                        this.timerInterval = setInterval(this.updateTimer, 1000);
-
-                        // Canvas Init & Clears
-                        this.$nextTick(() => {
-                            if (!this.ctx) this.initCanvas();
-                            if (msg.payload.game_state.phase === 'PRE_ROUND' || msg.payload.game_state.phase === 'DRAWER_PREPARING') this.performClear();
-                        });
-                    } else if (msg.type === "DRAW_STROKE") {
-                        const p = msg.payload;
-                        this.drawStroke(p.x1, p.y1, p.x2, p.y2, p.color);
-                    } else if (msg.type === "STROKE_HISTORY_UPDATE") {
-                        console.log("STROKE_HISTORY_UPDATE", msg.payload.history);
-                        this.strokeHistory = msg.payload.history;
-                        this.redrawFromHistory(this.strokeHistory);
-                    } else if (msg.type === "CLEAR_CANVAS") {
-                        this.performClear();
-                    } else if (msg.type === "PLAYER_DISCONNECTED") {
-                        const nickname = msg.payload.nickname;
-                        // Update player connected status
-                        const player = this.players.find(p => p.nickname === nickname);
-                        if (player) {
-                            player.connected = false;
-                        }
-                        this.messages.push({ sender: "System", text: `${nickname} disconnected.` });
-                        // Show brief notification
-                        this.showNotification(`${nickname} disconnected`, 'warning');
-                    } else if (msg.type === "PLAYER_LEFT") {
-                        const idx = this.players.findIndex(p => p.nickname === msg.payload.nickname);
-                        if (idx !== -1) this.players.splice(idx, 1);
-                        this.messages.push({ sender: "System", text: `${msg.payload.nickname} left the room.` });
-                    } else if (msg.type === "CHAT") {
-                        this.messages.push(msg.payload);
-
-                        // Success Notification Logic
-                        if (msg.payload.sender === 'System' && msg.payload.text.includes("guessed correctly!")) {
-                            if (!msg.payload.text.startsWith(this.nickname + ' ')) {
-                                this.showNotification(msg.payload.text, 'success');
-                            }
-                        }
-
-                        this.$nextTick(() => {
-                            const el = document.getElementById('chat-box');
-                            if (el) el.scrollTop = el.scrollHeight;
-                        });
-
-                        // Visual Feedback for Incorrect Guess (My guess)
-                        if (msg.payload.sender === this.nickname && msg.payload.text === "guessed incorrectly") {
-                            this.isShaking = true;
-                            setTimeout(() => this.isShaking = false, 500);
-                        }
-                    } else if (msg.type === "ERROR") {
-                        this.showNotification(msg.payload.message);
-                        if (msg.payload.message.includes("taken") || msg.payload.message.includes("started") || msg.payload.message.includes("Incorrect password")) {
-                            this.leaveRoom();
-                        }
-                    } else if (msg.type === "ROOM_CLOSED") {
-                        this.showNotification("Room closed by host", 'error');
-                        // Force leave without sending LEAVE_ROOM (since socket will be closed or room is gone)
-                        if (this.socket) {
-                            this.socket.close();
-                            this.socket = null;
-                        }
-                        this.resetState();
-                    }
-                },
-                updateTimer() {
-                    const now = Date.now() / 1000;
-                    this.timeLeft = Math.max(0, Math.floor(this.localTimerEnd - now));
-                    if (this.timeLeft === 0 && this.timerInterval) clearInterval(this.timerInterval);
-                },
-                sendChat() {
-                    if (!this.chatInput.trim() || !this.socket) return;
-                    this.socket.send(JSON.stringify({
-                        type: "CHAT",
-                        payload: { text: this.chatInput }
-                    }));
-                    this.chatInput = '';
-                },
-                showNotification(message, type = 'error') {
-                    const id = Math.random().toString(36).substr(2, 9);
-
-                    if (type === 'success' || type === 'warning') {
-                        // Clear previous success/warning notifications (non-stacking)
-                        this.notifications = this.notifications.filter(n => n.type !== 'success' && n.type !== 'warning');
-                        this.notifications.push({ id, message, type });
-                        setTimeout(() => this.removeNotification(id), 1000);
-                    } else {
-                        // Error notifications stack
-                        this.notifications.push({ id, message, type });
-                        setTimeout(() => this.removeNotification(id), 4000);
-                    }
-                },
-                removeNotification(id) {
-                    this.notifications = this.notifications.filter(n => n.id !== id);
-                },
-                resetState() {
-                    this.currentRoomId = null;
-                    localStorage.removeItem('roomId');
-                    localStorage.removeItem('roomToken');
-                    this.roomToken = null;
-                    this.joinPassword = '';
-                    this.players = [];
-                    this.messages = [];
-                    this.gameState = 'lobby';
-                    this.view = 'lobby';
-                    this.isDrawing = false;
-                    this.strokeHistory = [];
-                    this.performClear();
-
-                    // Reset Game Logic Data
-                    this.gameStateData = {
-                        round: 0,
-                        drawer: null,
-                        phase: 'PRE_ROUND',
-                        timer_end: 0,
-                        time_left: 0,
-                        word: '',
-                        word_hints: '',
-                        scores: {},
-                        correct_guessers: []
-                    };
-                    this.notifications = [];
-                    this.showLeaveModal = false;
-                    this.showPasswordModal = false;
-                    this.showInviteModal = false;
-
-                    setTimeout(() => {
-                        this.fetchRooms();
-                    }, 500);
-                }
-            }
-        }).mount('#app')
-    </script>
+    <script src="/static/app.js"></script>
     <style>
         @keyframes slide-in {
             from {
@@ -2182,6 +1157,23 @@
 
         .success-border {
             box-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+        }
+
+        /* Player List Shake Animation */
+        @keyframes player-shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            10%, 30%, 50%, 70%, 90% {
+                transform: translateX(-3px);
+            }
+            20%, 40%, 60%, 80% {
+                transform: translateX(3px);
+            }
+        }
+
+        .animate-player-shake {
+            animation: player-shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
         }
     </style>
 </body>
