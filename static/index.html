@@ -1270,8 +1270,10 @@
         .color-btn {
             width: var(--button-size);
             height: var(--button-size);
-            min-width: 1.5rem;
-            min-height: 1.5rem;
+            min-width: 1.3rem;
+            min-height: 1.3rem;
+            max-width: 2.5rem;
+            max-height: 2.5rem;
             border-radius: 0.375rem !important; /* rounded-lg - smaller radius to keep square shape on small buttons */
         }
 
@@ -1279,6 +1281,8 @@
         .drawing-actions-group .color-btn {
             /* Size will be set by JavaScript syncButtonSizes() */
             aspect-ratio: 1;
+            max-width: 2.5rem;
+            max-height: 2.5rem;
         }
 
         /* On very small screens, allow wrapping */

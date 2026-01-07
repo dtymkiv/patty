@@ -209,9 +209,21 @@ createApp({
                 this.$nextTick(() => {
                     setTimeout(() => this.checkResultsListScroll(), 100);
                 });
+                // Sync button sizes when toolbar becomes visible (DRAWER_PREPARING phase)
+                if (this.amIDrawing) {
+                    this.$nextTick(() => {
+                        setTimeout(() => this.syncButtonSizes(), 200);
+                    });
+                }
             } else if (newVal !== 'DRAWER_PREPARING') {
                 this.animatedResults = [];
                 this.resultsListNeedsScroll = false;
+            }
+            // Sync button sizes when phase changes to DRAWING (toolbar remains visible)
+            if (newVal === 'DRAWING' && this.amIDrawing) {
+                this.$nextTick(() => {
+                    setTimeout(() => this.syncButtonSizes(), 150);
+                });
             }
         },
         'animatedResults'() {
@@ -222,9 +234,17 @@ createApp({
         },
         amIDrawing(newVal) {
             if (newVal) {
-                // When drawing starts, sync button sizes
+                // When drawing starts, sync button sizes with longer delay to ensure DOM is ready
                 this.$nextTick(() => {
-                    setTimeout(() => this.syncButtonSizes(), 50);
+                    setTimeout(() => this.syncButtonSizes(), 150);
+                });
+            }
+        },
+        'gameStateData.drawer'(newVal) {
+            // When drawer changes, sync button sizes if we're the new drawer
+            if (newVal === this.nickname) {
+                this.$nextTick(() => {
+                    setTimeout(() => this.syncButtonSizes(), 150);
                 });
             }
         }
@@ -824,6 +844,12 @@ createApp({
                         && msg.payload.game_state.phase !== 'DRAWING') {
                         this.performClear();
                     }
+                    
+                    // Sync button sizes when drawer role changes and toolbar becomes visible (DRAWER_PREPARING or DRAWING phase)
+                    if (msg.payload.game_state.drawer === this.nickname && 
+                        (msg.payload.game_state.phase === 'DRAWER_PREPARING' || msg.payload.game_state.phase === 'DRAWING')) {
+                        setTimeout(() => this.syncButtonSizes(), 200);
+                    }
                 });
                 
                 // Clear incorrect guess tracking when a new DRAWING phase starts
@@ -1040,7 +1066,7 @@ createApp({
         },
         syncButtonSizes() {
             // Try multiple times with delays to ensure DOM is ready
-            const attemptSync = (retries = 3) => {
+            const attemptSync = (retries = 5) => {
                 const colorPalette = document.querySelector('.color-palette-grid');
                 const actionButtons = document.querySelectorAll('.drawing-actions-group .action-btn, .drawing-actions-group .color-btn');
                 
@@ -1048,14 +1074,23 @@ createApp({
                     const colorButton = colorPalette.querySelector('.color-btn');
                     if (colorButton) {
                         const computedStyle = window.getComputedStyle(colorButton);
-                        const width = computedStyle.width;
-                        const height = computedStyle.height;
+                        let width = computedStyle.width;
+                        let height = computedStyle.height;
                         
                         // Only sync if we got valid dimensions
                         if (width && height && width !== '0px' && height !== '0px') {
+                            // Parse width/height and apply max size cap (2.5rem = 40px)
+                            const maxSizePx = 40;
+                            const widthPx = parseFloat(width);
+                            const heightPx = parseFloat(height);
+                            
+                            // Cap at maximum size
+                            const finalWidth = Math.min(widthPx, maxSizePx) + 'px';
+                            const finalHeight = Math.min(heightPx, maxSizePx) + 'px';
+                            
                             actionButtons.forEach(btn => {
-                                btn.style.width = width;
-                                btn.style.height = height;
+                                btn.style.width = finalWidth;
+                                btn.style.height = finalHeight;
                             });
                             return true;
                         }
@@ -1064,7 +1099,7 @@ createApp({
                 
                 // Retry if failed and retries left
                 if (retries > 0) {
-                    setTimeout(() => attemptSync(retries - 1), 50);
+                    setTimeout(() => attemptSync(retries - 1), 100);
                 }
                 return false;
             };

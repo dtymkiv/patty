@@ -205,26 +205,54 @@ class GameHost {
         this.broadcastState();
 
         // Start Timer Interval
-        if (this.timerInterval) clearInterval(this.timerInterval);
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+        // Check timer immediately, then set up interval with more frequent checks
+        // Use 100ms interval for more reliable expiration detection
+        this.checkTimer();
         this.timerInterval = setInterval(() => {
             this.checkTimer();
-        }, 1000);
+        }, 100);
     }
 
     checkTimer() {
         if (this.state.phase !== "DRAWING") {
-            clearInterval(this.timerInterval);
+            if (this.timerInterval) {
+                clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            }
+            return;
+        }
+
+        // Safety check: ensure timer_end is valid
+        if (!this.state.timer_end || this.state.timer_end <= 0) {
             return;
         }
 
         const now = Date.now() / 1000;
         if (now >= this.state.timer_end) {
-            this.endRound();
+            // Timer expired - end the round
+            if (this.timerInterval) {
+                clearInterval(this.timerInterval);
+                this.timerInterval = null;
+            }
+            // Use setTimeout to ensure endRound runs even if called from interval
+            setTimeout(() => {
+                // Double-check phase hasn't changed
+                if (this.state.phase === "DRAWING" && now >= this.state.timer_end) {
+                    this.endRound();
+                }
+            }, 0);
         }
     }
 
     endRound() {
-        if (this.timerInterval) clearInterval(this.timerInterval);
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
 
         // state.phase = "POST_ROUND"; // Removed
         this.state.last_drawer = this.state.drawer;
@@ -485,17 +513,21 @@ class GameHost {
         this.saveState();
         
         // Ensure timer is running if we're in DRAWING phase
+        // This acts as a backup check in case the interval was cleared
         if (this.state.phase === "DRAWING" && this.state.timer_end > 0) {
             const now = Date.now() / 1000;
             if (now >= this.state.timer_end) {
-                // Timer expired, end round
+                // Timer expired, end round immediately
                 if (this.timerInterval) {
                     clearInterval(this.timerInterval);
                     this.timerInterval = null;
                 }
-                setTimeout(() => this.endRound(), 0);
+                // End round immediately - don't defer
+                this.endRound();
+                return; // Don't continue after ending round
             } else if (!this.timerInterval) {
                 // Timer should be running but isn't - restart it
+                // Use 100ms interval for more reliable expiration detection
                 this.timerInterval = setInterval(() => {
                     if (this.state.phase === "DRAWING" && this.state.timer_end > 0) {
                         this.checkTimer();
@@ -505,7 +537,7 @@ class GameHost {
                             this.timerInterval = null;
                         }
                     }
-                }, 1000);
+                }, 100);
             }
         }
 

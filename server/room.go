@@ -176,14 +176,15 @@ func (r *Room) Run() {
 				delete(r.clients, client)
 				client.room = nil
 
+				// Track ALL disconnected players (including host) for reconnection
+				r.disconnectedPlayers[nickname] = time.Now()
+
 				if client.isHost {
 					r.hostConnected = false
 					r.broadcastParams("HOST_DISCONNECTED", nil)
 					// Don't close room immediately - wait for host to reconnect
 					// Room will close via timeout if empty for too long
 				} else {
-					// Track disconnected player for reconnection
-					r.disconnectedPlayers[nickname] = time.Now()
 					// Mark as disconnected (not removed) so they can reconnect
 					r.broadcastParams("PLAYER_DISCONNECTED", map[string]interface{}{
 						"nickname": nickname,
@@ -316,10 +317,10 @@ func (r *Room) Run() {
 				return // Closes room
 			}
 
-			// Clean up old disconnected players (older than 2 minutes)
+			// Clean up old disconnected players (older than 5 minutes)
 			now := time.Now()
 			for nickname, disconnectedTime := range r.disconnectedPlayers {
-				if now.Sub(disconnectedTime) > 2*time.Minute {
+				if now.Sub(disconnectedTime) > 5*time.Minute {
 					delete(r.disconnectedPlayers, nickname)
 				}
 			}
