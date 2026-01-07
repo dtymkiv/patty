@@ -248,6 +248,31 @@ class GameHost {
         this.broadcastState();
     }
 
+    resetToLobby() {
+        // Reset game state back to lobby while preserving config and players
+        this.state.phase = "LOBBY";
+        this.state.round = 0;
+        this.state.drawer = null;
+        this.state.last_drawer = null;
+        this.state.last_word = null;
+        this.state.word = null;
+        this.state.word_hints = null;
+        this.state.timer_end = 0;
+        this.state.time_left = 0;
+        this.state.correct_guessers = [];
+        this.state.turn_results = {};
+        this.state.stroke_history = [];
+        
+        // Reset all player scores
+        Object.values(this.players).forEach(p => {
+            p.score = 0;
+            p.is_ready = false;
+            p.has_guessed_correctly = false;
+        });
+        
+        this.broadcastState();
+    }
+
     // --- Handlers ---
 
     handleChat(senderNickname, text) {
@@ -353,11 +378,13 @@ class GameHost {
         }
 
         this.broadcast("STROKE_HISTORY_UPDATE", { history: this.state.stroke_history });
+        this.saveState();
     }
 
     handleClear() {
         this.state.stroke_history = [];
         this.broadcast("CLEAR_CANVAS", {});
+        this.saveState();
     }
 
     handleToggleReady(nickname) {

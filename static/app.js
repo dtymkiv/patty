@@ -72,7 +72,8 @@ createApp({
             lastX: 0,
             lastY: 0,
             currentBrushColor: '#000000',
-            drawColors: ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#FFFFFF', '#8B4513', '#FFA500'],
+            isEraser: false,
+            drawColors: ['#000000', '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF', '#8B4513', '#FFA500'],
             strokeHistory: [],
             currentActionId: null,
 
@@ -90,7 +91,8 @@ createApp({
             inviteLink: '',
             linkCopied: false,
             pendingRoomJoin: null,
-            playersWithIncorrectGuess: new Set() // Track players who guessed incorrectly for animation
+            playersWithIncorrectGuess: new Set(), // Track players who guessed incorrectly for animation
+            resultsListNeedsScroll: false // Track if results list needs scrolling
         }
     },
     computed: {
@@ -169,6 +171,13 @@ createApp({
                 if (p.is_host && !hostIsPlayer) return false;
                 return true;
             }).length;
+        },
+        myResultEntry() {
+            // Get current player's result entry from animatedResults
+            if (!this.animatedResults || this.animatedResults.length === 0) return null;
+            // Don't show for host in spectator mode
+            if (this.amIHost && this.gameConfig.host_role === 'spectator') return null;
+            return this.animatedResults.find(res => res.nickname === this.nickname) || null;
         }
     },
     watch: {
@@ -176,7 +185,10 @@ createApp({
             if (newVal === 'playing') {
                 // Initialize canvas for both drawer and viewers
                 // Viewers need it to see the strokes being drawn
-                this.$nextTick(() => this.initCanvas());
+                this.$nextTick(() => {
+                    this.initCanvas();
+                    setTimeout(() => this.syncButtonSizes(), 100);
+                });
             }
         },
         'gameConfig.word_language'(newVal) {
@@ -193,8 +205,27 @@ createApp({
         'gameStateData.phase'(newVal, oldVal) {
             if (newVal === 'DRAWER_PREPARING' && oldVal !== 'DRAWER_PREPARING') {
                 this.startResultsAnimation();
+                // Check if scrolling is needed after animation starts
+                this.$nextTick(() => {
+                    setTimeout(() => this.checkResultsListScroll(), 100);
+                });
             } else if (newVal !== 'DRAWER_PREPARING') {
                 this.animatedResults = [];
+                this.resultsListNeedsScroll = false;
+            }
+        },
+        'animatedResults'() {
+            // Check scroll when results change
+            this.$nextTick(() => {
+                setTimeout(() => this.checkResultsListScroll(), 100);
+            });
+        },
+        amIDrawing(newVal) {
+            if (newVal) {
+                // When drawing starts, sync button sizes
+                this.$nextTick(() => {
+                    setTimeout(() => this.syncButtonSizes(), 50);
+                });
             }
         }
     },
@@ -298,6 +329,9 @@ createApp({
                 this.timeLeft = 0;
             }
         }, 100);
+
+        // Sync button sizes after initial render
+        setTimeout(() => this.syncButtonSizes(), 200);
     },
     methods: {
         checkMobile() {
@@ -580,8 +614,11 @@ createApp({
                 if (msg.type === "DRAW_STROKE") {
                     // Host needs to draw on local canvas too (for reconnection scenarios)
                     // Draw locally first, then update authoritative state
-                    this.drawStroke(msg.payload.x1, msg.payload.y1, msg.payload.x2, msg.payload.y2, msg.payload.color);
+                    const isEraser = msg.payload.isEraser || msg.payload.color === '#FFFFFF';
+                    this.drawStroke(msg.payload.x1, msg.payload.y1, msg.payload.x2, msg.payload.y2, msg.payload.color, false, isEraser);
                     this.hostLogic.handleDraw(msg.payload);
+                    // Sync local history from hostLogic (authoritative source)
+                    this.strokeHistory = this.hostLogic.state.stroke_history || [];
                     return;
                 }
                 if (msg.type === "UNDO_STROKE") { this.hostLogic.handleUndo(); return; }
@@ -690,7 +727,7 @@ createApp({
                     this.players.splice(index, 1);
                     // Show notification for player intentionally leaving
                     if (nickname !== this.nickname) {
-                        this.showNotification(`${nickname} left`, 'info');
+                        this.showNotification(`${nickname} left`, 'error');
                     }
                 }
                 if (this.hostLogic) {
@@ -838,7 +875,8 @@ createApp({
                     }, 400);
                 }
             } else if (msg.type === "DRAW_STROKE") {
-                this.drawStroke(msg.payload.x1, msg.payload.y1, msg.payload.x2, msg.payload.y2, msg.payload.color);
+                const isEraser = msg.payload.isEraser || msg.payload.color === '#FFFFFF';
+                this.drawStroke(msg.payload.x1, msg.payload.y1, msg.payload.x2, msg.payload.y2, msg.payload.color, false, isEraser);
             } else if (msg.type === "CLEAR_CANVAS") {
                 this.performClear();
             } else if (msg.type === "STROKE_HISTORY_UPDATE") {
@@ -889,7 +927,45 @@ createApp({
                 this.hostLogic.init(this.wordSets);
                 this.hostLogicInitialized = true;
             }
-            this.hostLogic.startGame();
+            // If game is over, reset to lobby first (preserves config and players)
+            if (this.gameStateData.phase === 'GAME_OVER') {
+                // Check if resetToLobby method exists (for backwards compatibility)
+                if (typeof this.hostLogic.resetToLobby === 'function') {
+                    this.hostLogic.resetToLobby();
+                } else {
+                    // Fallback: manually reset state if method doesn't exist
+                    this.hostLogic.state.phase = "LOBBY";
+                    this.hostLogic.state.round = 0;
+                    this.hostLogic.state.drawer = null;
+                    this.hostLogic.state.last_drawer = null;
+                    this.hostLogic.state.last_word = null;
+                    this.hostLogic.state.word = null;
+                    this.hostLogic.state.word_hints = null;
+                    this.hostLogic.state.timer_end = 0;
+                    this.hostLogic.state.time_left = 0;
+                    this.hostLogic.state.correct_guessers = [];
+                    this.hostLogic.state.turn_results = {};
+                    this.hostLogic.state.stroke_history = [];
+                    Object.values(this.hostLogic.players).forEach(p => {
+                        p.score = 0;
+                        p.is_ready = false;
+                        p.has_guessed_correctly = false;
+                    });
+                    this.hostLogic.broadcastState();
+                }
+                // Clear canvas when resetting to lobby
+                if (this.ctx) {
+                    this.performClear();
+                }
+                // Wait a moment for state to sync, then start the game
+                this.$nextTick(() => {
+                    setTimeout(() => {
+                        this.hostLogic.startGame();
+                    }, 100);
+                });
+            } else {
+                this.hostLogic.startGame();
+            }
         },
         startActiveRound() {
             if (this.socket) {
@@ -956,6 +1032,46 @@ createApp({
         handleResize() {
             this.checkMobile();
             if (this.ctx) this.redrawFromHistory(this.strokeHistory);
+            this.syncButtonSizes();
+            // Check if results list scroll state changed
+            if (this.gameStateData.phase === 'DRAWER_PREPARING') {
+                this.checkResultsListScroll();
+            }
+        },
+        syncButtonSizes() {
+            // Try multiple times with delays to ensure DOM is ready
+            const attemptSync = (retries = 3) => {
+                const colorPalette = document.querySelector('.color-palette-grid');
+                const actionButtons = document.querySelectorAll('.drawing-actions-group .action-btn, .drawing-actions-group .color-btn');
+                
+                if (colorPalette && actionButtons.length > 0) {
+                    const colorButton = colorPalette.querySelector('.color-btn');
+                    if (colorButton) {
+                        const computedStyle = window.getComputedStyle(colorButton);
+                        const width = computedStyle.width;
+                        const height = computedStyle.height;
+                        
+                        // Only sync if we got valid dimensions
+                        if (width && height && width !== '0px' && height !== '0px') {
+                            actionButtons.forEach(btn => {
+                                btn.style.width = width;
+                                btn.style.height = height;
+                            });
+                            return true;
+                        }
+                    }
+                }
+                
+                // Retry if failed and retries left
+                if (retries > 0) {
+                    setTimeout(() => attemptSync(retries - 1), 50);
+                }
+                return false;
+            };
+            
+            this.$nextTick(() => {
+                attemptSync();
+            });
         },
         openInviteModal() {
             if (!this.roomCode) return;
@@ -1146,15 +1262,19 @@ createApp({
             if (!this.isDrawing || !this.amIDrawing) return;
             const pos = this.getPos(e);
 
-            const payload = { x1: this.lastX, y1: this.lastY, x2: pos.x, y2: pos.y, color: this.currentBrushColor, actionId: this.currentActionId };
+            // Use white color for eraser mode
+            const strokeColor = this.isEraser ? '#FFFFFF' : this.currentBrushColor;
+            const payload = { x1: this.lastX, y1: this.lastY, x2: pos.x, y2: pos.y, color: strokeColor, actionId: this.currentActionId, isEraser: this.isEraser };
 
             if (this.amIHost && this.hostLogic) {
                 // Host Drawer: Draw locally AND update authoritative history and broadcast
-                this.drawStroke(payload.x1, payload.y1, payload.x2, payload.y2, payload.color);
+                this.drawStroke(payload.x1, payload.y1, payload.x2, payload.y2, payload.color, false, payload.isEraser, payload.actionId);
                 this.hostLogic.handleDraw(payload);
+                // Sync local history from hostLogic (authoritative source)
+                this.strokeHistory = this.hostLogic.state.stroke_history || [];
             } else {
                 // Player Drawer: Draw locally for latency and send to Host
-                this.drawStroke(payload.x1, payload.y1, payload.x2, payload.y2, payload.color);
+                this.drawStroke(payload.x1, payload.y1, payload.x2, payload.y2, payload.color, false, payload.isEraser, payload.actionId);
                 this.socket.send(JSON.stringify({
                     type: "DRAW_STROKE",
                     payload: payload
@@ -1165,7 +1285,7 @@ createApp({
             this.lastY = pos.y;
         },
         stopDrawing() { this.isDrawing = false; },
-        drawStroke(x1, y1, x2, y2, color, fromHistory = false) {
+        drawStroke(x1, y1, x2, y2, color, fromHistory = false, isEraserStroke = false, actionId = null) {
             // Ensure canvas is initialized if not already done
             if (!this.ctx && this.$refs.gameCanvas) {
                 this.initCanvas();
@@ -1177,12 +1297,22 @@ createApp({
             this.ctx.beginPath();
             this.ctx.moveTo(x1 * w, y1 * h);
             this.ctx.lineTo(x2 * w, y2 * h);
-            this.ctx.strokeStyle = color;
-            this.ctx.lineWidth = 15;
+            // Use eraser mode: white color with 3x line width
+            // Check if it's an eraser stroke (either from current eraser mode or from received payload)
+            // Also check if color is white (since white is no longer in color picker, white = eraser)
+            const isEraser = isEraserStroke || (fromHistory && color === '#FFFFFF') || (!fromHistory && this.isEraser);
+            if (isEraser) {
+                this.ctx.strokeStyle = '#FFFFFF';
+                this.ctx.lineWidth = 45;
+            } else {
+                this.ctx.strokeStyle = color;
+                this.ctx.lineWidth = 15;
+            }
             this.ctx.stroke();
 
-            if (!fromHistory) {
-                this.strokeHistory.push({ x1, y1, x2, y2, color });
+            // Only add to local history if not from history and not host (host syncs from hostLogic)
+            if (!fromHistory && !this.amIHost) {
+                this.strokeHistory.push({ x1, y1, x2, y2, color, actionId, isEraser: isEraser });
             }
         },
         performClear() { if (this.ctx) this.ctx.clearRect(0, 0, 2000, 1500); this.strokeHistory = []; },
@@ -1198,11 +1328,21 @@ createApp({
             if (!this.amIDrawing) return;
             if (this.amIHost && this.hostLogic) {
                 this.hostLogic.handleUndo();
+                // Sync local history from hostLogic after undo
+                this.strokeHistory = this.hostLogic.state.stroke_history || [];
+                // Redraw canvas with updated history
+                this.redrawFromHistory(this.strokeHistory);
             } else {
                 this.socket.send(JSON.stringify({ type: "UNDO_STROKE", payload: {} }));
             }
         },
-        setBrushColor(c) { this.currentBrushColor = c; },
+        setBrushColor(c) { 
+            this.currentBrushColor = c; 
+            this.isEraser = false;
+        },
+        toggleEraser() {
+            this.isEraser = !this.isEraser;
+        },
         getPos(e) {
             const rect = this.$refs.gameCanvas.getBoundingClientRect();
             let x = (e.clientX - rect.left) / rect.width;
@@ -1224,28 +1364,44 @@ createApp({
         startResultsAnimation() {
             this.animatedResults = [];
             const results = this.gameStateData.turn_results || {};
-            // Filter out empty results if any
             let updateList = [];
 
-            // We want to show everyone involved in this turn's scoring
-            // Usually just correct guessers + drawer
+            // Get all players (excluding host if spectator mode)
+            const allPlayers = this.players.filter(p => {
+                if (p.is_host && this.gameConfig.host_role === 'spectator') return false;
+                return true;
+            });
 
-            // But we also want to be robust if turn_results is missing (e.g. late join)
-            // If empty, show nothing?
-
-            Object.entries(results).forEach(([nick, res]) => {
+            // Create entries for all players
+            allPlayers.forEach(player => {
+                const res = results[player.nickname];
                 updateList.push({
-                    nickname: nick,
-                    points: res.points,
-                    time: res.time
+                    nickname: player.nickname,
+                    points: res ? res.points : 0,
+                    time: res ? res.time : null,
+                    totalScore: player.score || 0 // Use current total score for sorting
                 });
             });
 
-            // Sort: Drawer first? or Highest points first?
-            // Usually highest points looks best.
-            updateList.sort((a, b) => b.points - a.points);
+            // Sort: Highest total score first, then by nickname for consistency
+            updateList.sort((a, b) => {
+                if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore;
+                return a.nickname.localeCompare(b.nickname);
+            });
 
             this.animatedResults = updateList;
+        },
+        checkResultsListScroll() {
+            // Check if the results list container needs scrolling
+            this.$nextTick(() => {
+                const container = document.querySelector('.results-list-container');
+                if (container) {
+                    // Check if content height exceeds container height
+                    this.resultsListNeedsScroll = container.scrollHeight > container.clientHeight;
+                } else {
+                    this.resultsListNeedsScroll = false;
+                }
+            });
         },
         getPlayerColor(nickname) {
             const p = this.players.find(x => x.nickname === nickname);

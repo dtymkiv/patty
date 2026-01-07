@@ -630,24 +630,36 @@
                                 class="interaction-bar-container bg-white dark:bg-gray-800 p-2 sm:p-3 border-t border-gray-100 dark:border-gray-700 shadow-lg shrink-0 sm:rounded-b-2xl">
                                 <!-- Drawing Toolbar (Drawer Only) -->
                                 <div v-if="amIDrawing && gameStateData.phase !== 'POST_ROUND' && gameStateData.phase !== 'GAME_OVER'"
-                                    class="drawing-toolbar-inner flex items-center justify-between gap-2 max-w-full transition-colors duration-300">
+                                    class="drawing-toolbar-inner flex items-center justify-between gap-2 max-w-full transition-colors duration-300"
+                                    style="--total-buttons: 10; --gap-size: 0.25rem;">
                                     <div
-                                        class="color-palette-grid flex flex-wrap sm:flex-nowrap gap-1 sm:gap-1 justify-center flex-1 min-w-0">
+                                        class="color-palette-grid flex flex-nowrap gap-1 justify-center flex-1 min-w-0 items-center">
                                         <template v-for="c in drawColors" :key="c">
                                             <button @click="setBrushColor(c)" :style="{backgroundColor: c}"
-                                                class="w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 border-white dark:border-gray-900 hover:scale-125 transition-all shrink-0 shadow-lg active:scale-90"
-                                                :class="{'ring-4 ring-[#ea5128]': currentBrushColor === c}"></button>
+                                                class="color-btn rounded-xl border-2 border-white dark:border-gray-900 hover:scale-110 transition-all shadow-lg active:scale-90 aspect-square flex-shrink"
+                                                :class="{'ring-4 ring-[#ea5128]': currentBrushColor === c && !isEraser}"></button>
                                         </template>
+                                        <button @click="toggleEraser" title="Eraser"
+                                            class="color-btn flex items-center justify-center bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 transition-all active:scale-90 shadow-lg flex-shrink aspect-square"
+                                            :class="{'ring-4 ring-[#ea5128] bg-gray-200 dark:bg-gray-600': isEraser}">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full p-1.5" fill="currentColor" viewBox="0 0 16 16">
+                                                <path d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828zm2.121.707a1 1 0 0 0-1.414 0L4.16 7.547l5.293 5.293 4.633-4.633a1 1 0 0 0 0-1.414zM8.746 13.547 3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293z"/>
+                                            </svg>
+                                        </button>
                                     </div>
                                     <div
                                         class="drawing-actions-group flex items-center gap-1.5 pl-2 border-l border-gray-100 dark:border-gray-700 shrink-0">
                                         <button @click="undoStroke" title="Undo last stroke"
-                                            class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-xl text-white transition-all active:scale-90 shadow-lg">
-                                            <span class="text-lg">↩️</span>
+                                            class="color-btn action-btn flex items-center justify-center bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-all active:scale-90 shadow-lg aspect-square">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full p-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                            </svg>
                                         </button>
                                         <button @click="clearCanvas" title="Clear all drawings"
-                                            class="w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-xl text-white transition-all active:scale-90 shadow-lg">
-                                            <span class="text-lg">🗑️</span>
+                                            class="color-btn action-btn flex items-center justify-center bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-all active:scale-90 shadow-lg aspect-square">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full p-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
                                         </button>
                                     </div>
                                 </div>
@@ -710,7 +722,8 @@
                                             'opacity-60': !p.connected,
                                             'opacity-40': p.is_spectator,
                                             'border-green-500 shadow-lg shadow-green-500/30': p.has_guessed_correctly && gameStateData.phase === 'DRAWING',
-                                            'animate-player-shake border-red-500 shadow-lg shadow-red-500/30': playersWithIncorrectGuess.has(p.nickname) && gameStateData.phase === 'DRAWING'
+                                            'animate-player-shake border-red-500 shadow-lg shadow-red-500/30': playersWithIncorrectGuess.has(p.nickname) && gameStateData.phase === 'DRAWING',
+                                            'border-yellow-500/50 shadow-lg': p.nickname === gameStateData.drawer && gameStateData.phase === 'DRAWING'
                                         }">
                                         <div class="flex items-center gap-2">
                                             <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm text-white relative shadow-md"
@@ -720,11 +733,11 @@
                                                     class="absolute -top-1 -right-1 text-xs">👑</span>
                                             </div>
                                             <span class="truncate max-w-[100px] font-bold" :style="{color: p.color, opacity: p.is_spectator ? 0.5 : 1}">{{
-                                                p.nickname }}</span>
+                                                p.nickname }}</span><span v-if="p.nickname === nickname" class="text-xs text-gray-500 dark:text-gray-400 italic font-bold ml-1 flex-shrink-0">(you)</span>
                                         </div>
 
                                         <div class="flex items-center gap-2">
-                                            <span class="text-sm font-black text-yellow-500">{{ p.score || 0
+                                            <span v-if="gameState !== 'lobby'" class="text-sm font-black text-yellow-500">{{ p.score || 0
                                                 }}</span>
                                             <!-- Show ready checkmark only in lobby -->
                                             <span v-if="gameState === 'lobby' && p.is_ready"
@@ -809,7 +822,7 @@
                                 }}</span>
                             <span
                                 :class="idx === 0 ? 'font-black text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 font-bold'">{{
-                                p.nickname }}</span>
+                                p.nickname }}<span v-if="p.nickname === nickname" class="text-xs text-gray-500 dark:text-gray-400 italic font-bold ml-1">(you)</span></span>
                         </div>
                         <span class="font-black"
                             :class="idx === 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-400'">{{
@@ -860,35 +873,36 @@
                     </div>
                 </div>
 
-                <div class="p-6 space-y-4 max-h-[50vh] overflow-y-auto bg-white dark:bg-gray-800">
-                    <transition-group name="results-list" tag="div" class="space-y-4">
+                <div class="results-list-container p-4 space-y-2 max-h-[50vh] overflow-y-auto bg-white dark:bg-gray-800">
+                    <transition-group name="results-list" tag="div" class="space-y-2">
                         <div v-for="(res, idx) in animatedResults" :key="res.nickname"
-                            class="relative flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-2xl border-2 transition-all duration-500 animate-slide-in"
+                            class="relative flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border-2 transition-all duration-500 animate-slide-in"
                             :class="res.nickname === gameStateData.last_drawer ? 'border-yellow-500/50 shadow-lg' : 'border-transparent'"
                             :style="{ animationDelay: (idx * 0.1) + 's' }">
 
-                            <div class="w-12 h-12 rounded-full flex-shrink-0 flex items-center justify-center text-xl font-black text-white shadow-xl relative"
+                            <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-base font-black text-white shadow-xl relative"
                                 :style="{ backgroundColor: getPlayerColor(res.nickname) }">
                                 {{ res.nickname[0] }}
                                 <!-- Rank Badge -->
                                 <div v-if="getRank(res.nickname)"
-                                    class="absolute -top-2 -left-2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center text-[10px] text-black font-black border-2 border-white dark:border-gray-800 shadow-md">
+                                    class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-[9px] text-black font-black border-2 border-white dark:border-gray-800 shadow-md">
                                     #{{ getRank(res.nickname) }}
                                 </div>
                             </div>
 
                             <div class="flex-1">
-                                <div class="flex justify-between items-end mb-1">
-                                    <span class="font-black text-gray-800 dark:text-gray-200 text-lg">{{
-                                        res.nickname }} <span v-if="res.nickname === gameStateData.last_drawer"
+                                <div class="flex justify-between items-end mb-0.5">
+                                    <span class="font-black text-gray-800 dark:text-gray-200 text-base">{{
+                                        res.nickname }} <span v-if="res.nickname === nickname"
+                                            class="text-xs text-gray-500 dark:text-gray-400 italic font-bold">(you)</span><span v-if="res.nickname === gameStateData.last_drawer"
                                             class="text-xs text-[#ea5128] italic font-bold">(Drawer)</span></span>
                                     <span v-if="gameStateData.last_drawer"
-                                        class="text-green-600 dark:text-green-400 font-black text-2xl animate-pulse">+{{
+                                        class="text-green-600 dark:text-green-400 font-black text-xl animate-pulse">+{{
                                         res.points
                                         }}</span>
                                 </div>
                                 <div
-                                    class="relative h-4 w-full bg-gray-200 dark:bg-gray-900 rounded-full overflow-hidden flex shadow-inner">
+                                    class="relative h-3 w-full bg-gray-200 dark:bg-gray-900 rounded-full overflow-hidden flex shadow-inner">
                                     <!-- Base Score Segment -->
                                     <div class="h-full bg-[#ea5128]/60 transition-all duration-500 ease-out"
                                         :style="{ width: getBaseScorePercentage(res.nickname) + '%' }">
@@ -898,24 +912,78 @@
                                         :style="{ width: getNewPointsPercentage(res.nickname) + '%' }">
                                     </div>
                                 </div>
-                                <div class="flex justify-between mt-1 pt-1">
+                                <div class="flex justify-between mt-0.5">
                                     <span
-                                        class="text-xs text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">Total:
+                                        class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">Total:
                                         <span class="text-gray-900 dark:text-white">{{
                                             getBaseScore(res.nickname) +
                                             res.points }}</span></span>
                                     <span v-if="res.nickname === gameStateData.last_drawer"
-                                        class="text-[10px] text-gray-400 italic">
+                                        class="text-[9px] text-gray-400 italic">
                                         guessed in {{ res.time }}s
                                     </span>
                                     <span v-else-if="res.time"
-                                        class="text-[10px] text-gray-400 italic font-bold">Guessed in
+                                        class="text-[9px] text-gray-400 italic font-bold">Guessed in
                                         {{
                                         res.time }}s</span>
                                 </div>
                             </div>
                         </div>
                     </transition-group>
+                </div>
+
+                <!-- Sticky duplicate of current player's result -->
+                <div v-if="myResultEntry && !(amIHost && gameConfig.host_role === 'spectator') && resultsListNeedsScroll"
+                    class="sticky bottom-0 p-4 pt-0 bg-white dark:bg-gray-800 border-t-2 border-gray-200 dark:border-gray-700">
+                    <div class="relative flex items-center gap-3 p-2.5 bg-gray-50 dark:bg-gray-700/40 rounded-xl border-2 border-yellow-500/50 shadow-lg">
+                        <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-base font-black text-white shadow-xl relative"
+                            :style="{ backgroundColor: getPlayerColor(myResultEntry.nickname) }">
+                            {{ myResultEntry.nickname[0] }}
+                            <!-- Rank Badge -->
+                            <div v-if="getRank(myResultEntry.nickname)"
+                                class="absolute -top-1.5 -left-1.5 w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-[9px] text-black font-black border-2 border-white dark:border-gray-800 shadow-md">
+                                #{{ getRank(myResultEntry.nickname) }}
+                            </div>
+                        </div>
+
+                        <div class="flex-1">
+                            <div class="flex justify-between items-end mb-0.5">
+                                <span class="font-black text-gray-800 dark:text-gray-200 text-base">{{
+                                    myResultEntry.nickname }} <span class="text-xs text-gray-500 dark:text-gray-400 italic font-bold">(you)</span><span v-if="myResultEntry.nickname === gameStateData.last_drawer"
+                                        class="text-xs text-[#ea5128] italic font-bold">(Drawer)</span></span>
+                                <span v-if="gameStateData.last_drawer"
+                                    class="text-green-600 dark:text-green-400 font-black text-xl animate-pulse">+{{
+                                    myResultEntry.points
+                                    }}</span>
+                            </div>
+                            <div
+                                class="relative h-3 w-full bg-gray-200 dark:bg-gray-900 rounded-full overflow-hidden flex shadow-inner">
+                                <!-- Base Score Segment -->
+                                <div class="h-full bg-[#ea5128]/60 transition-all duration-500 ease-out"
+                                    :style="{ width: getBaseScorePercentage(myResultEntry.nickname) + '%' }">
+                                </div>
+                                <!-- New Points Segment -->
+                                <div class="h-full bg-[#ea5128] transition-all duration-500 ease-out fill-animation border-l border-white/20"
+                                    :style="{ width: getNewPointsPercentage(myResultEntry.nickname) + '%' }">
+                                </div>
+                            </div>
+                            <div class="flex justify-between mt-0.5">
+                                <span
+                                    class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">Total:
+                                    <span class="text-gray-900 dark:text-white">{{
+                                        getBaseScore(myResultEntry.nickname) +
+                                        myResultEntry.points }}</span></span>
+                                <span v-if="myResultEntry.nickname === gameStateData.last_drawer"
+                                    class="text-[9px] text-gray-400 italic">
+                                    guessed in {{ myResultEntry.time }}s
+                                </span>
+                                <span v-else-if="myResultEntry.time"
+                                    class="text-[9px] text-gray-400 italic font-bold">Guessed in
+                                    {{
+                                    myResultEntry.time }}s</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="p-8 bg-gray-50 dark:bg-gray-900/50 text-center flex flex-col items-center gap-6">
@@ -1065,9 +1133,21 @@
                 <div v-for="note in notifications" :key="note.id"
                     class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl border backdrop-blur-md min-w-[300px] max-w-sm"
                     :class="note.type === 'error' ? 'bg-red-500/90 border-red-400 text-white' : note.type === 'warning' ? 'bg-orange-500/90 border-orange-400 text-white' : 'bg-green-500/90 border-green-400 text-white'">
-                    <span v-if="note.type === 'error'" class="text-xl">⚠️</span>
-                    <span v-else-if="note.type === 'warning'" class="text-xl">🔌</span>
-                    <span v-else class="text-xl">✅</span>
+                    <span v-if="note.type === 'error'" class="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </span>
+                    <span v-else-if="note.type === 'warning'" class="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.464-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+                        </svg>
+                    </span>
+                    <span v-else class="flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </span>
                     <p class="font-bold text-sm">{{ note.message }}</p>
                     <button @click="removeNotification(note.id)" class="ml-auto hover:opacity-70 transition-opacity">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
@@ -1174,6 +1254,38 @@
 
         .animate-player-shake {
             animation: player-shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        /* Dynamic color button sizing */
+        .drawing-toolbar-inner {
+            --total-buttons: 10; /* 9 colors + 1 eraser */
+            --gap-size: 0.25rem; /* gap-1 = 0.25rem */
+        }
+
+        .color-palette-grid {
+            /* Calculate button size based on this container's actual width */
+            --button-size: min(2.5rem, calc((100% - var(--gap-size) * (var(--total-buttons) - 1)) / var(--total-buttons)));
+        }
+
+        .color-btn {
+            width: var(--button-size);
+            height: var(--button-size);
+            min-width: 1.5rem;
+            min-height: 1.5rem;
+            border-radius: 0.375rem !important; /* rounded-lg - smaller radius to keep square shape on small buttons */
+        }
+
+        /* Action buttons (undo/clear) - JavaScript will set inline styles to match color buttons */
+        .drawing-actions-group .color-btn {
+            /* Size will be set by JavaScript syncButtonSizes() */
+            aspect-ratio: 1;
+        }
+
+        /* On very small screens, allow wrapping */
+        @media (max-width: 320px) {
+            .color-palette-grid {
+                flex-wrap: wrap;
+            }
         }
     </style>
 </body>

@@ -35,7 +35,7 @@ func main() {
 
 	// Register static file handler first (more specific routes should be registered first)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
-	
+
 	// Register API routes before root handler
 	http.HandleFunc("/api/rooms", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -44,7 +44,7 @@ func main() {
 		}
 		hub.HandleListRooms(w, r)
 	})
-	
+
 	http.HandleFunc("/api/create-room", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -63,7 +63,6 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, indexPath)
 	})
-
 
 	log.Printf("Server starting on %s...", *addr)
 	err = http.ListenAndServe(*addr, nil)
