@@ -31,6 +31,8 @@ createApp({
 
             isHostDisconnected: false,
             hostLogic: null,
+            hostLogicInitialized: false,
+            assetsLoaded: false,
 
             isInputFocused: false,
             isMobileView: false,
@@ -200,23 +202,45 @@ createApp({
         window.addEventListener('resize', this.handleResize);
 
         // Load Assets (Word Sets)
-        fetch('/static/assets.json').then(r => r.json()).then(data => {
-            this.wordSets = data.WORD_SETS;
-            const langs = {};
-            const diffs = {};
-            for (const l in this.wordSets) {
-                // Use proper language metadata with flags from LANGUAGE_METADATA
-                langs[l] = data.LANGUAGE_METADATA?.[l] || l;
-                diffs[l] = Object.keys(this.wordSets[l]);
-            }
-            this.wordSetMetadata = { languages: langs, difficulties: diffs };
+        this.assetsLoaded = false;
+        fetch('/static/assets.json')
+            .then(r => {
+                if (!r.ok) {
+                    throw new Error(`Failed to load assets: ${r.status} ${r.statusText}`);
+                }
+                return r.json();
+            })
+            .then(data => {
+                if (!data.WORD_SETS || Object.keys(data.WORD_SETS).length === 0) {
+                    throw new Error("Word sets data is empty or invalid");
+                }
+                this.wordSets = data.WORD_SETS;
+                const langs = {};
+                const diffs = {};
+                for (const l in this.wordSets) {
+                    // Use proper language metadata with flags from LANGUAGE_METADATA
+                    langs[l] = data.LANGUAGE_METADATA?.[l] || l;
+                    diffs[l] = Object.keys(this.wordSets[l]);
+                }
+                this.wordSetMetadata = { languages: langs, difficulties: diffs };
 
-            if (!this.gameConfig.word_language) {
-                this.gameConfig.word_language = Object.keys(langs)[0];
-                const d = diffs[this.gameConfig.word_language];
-                if (d && d.length > 0) this.gameConfig.word_difficulty = d[0];
-            }
-        }).catch(e => console.error("Failed to load assets", e));
+                if (!this.gameConfig.word_language) {
+                    this.gameConfig.word_language = Object.keys(langs)[0];
+                    const d = diffs[this.gameConfig.word_language];
+                    if (d && d.length > 0) this.gameConfig.word_difficulty = d[0];
+                }
+                this.assetsLoaded = true;
+                // If host logic was already initialized before assets loaded, initialize it now
+                if (this.hostLogic && !this.hostLogicInitialized) {
+                    this.hostLogic.init(this.wordSets);
+                    this.hostLogicInitialized = true;
+                }
+            })
+            .catch(e => {
+                console.error("Failed to load assets", e);
+                this.showNotification("Failed to load word sets. Please refresh the page.", "error");
+                this.assetsLoaded = false;
+            });
 
         // URL Params (Code)
         const urlParams = new URLSearchParams(window.location.search);
@@ -415,6 +439,12 @@ createApp({
                 this.gameState = this.gameStateData.phase === 'LOBBY' ? 'lobby' : 'playing';
                 this.hostLogic.broadcastState();
             }
+
+            // Initialize wordSets if assets are already loaded
+            if (this.assetsLoaded && this.wordSets && Object.keys(this.wordSets).length > 0) {
+                this.hostLogic.init(this.wordSets);
+                this.hostLogicInitialized = true;
+            }
         },
         connectWebSocket() {
             return new Promise((resolve) => {
@@ -546,7 +576,11 @@ createApp({
                 if (msg.payload.is_host) {
                     if (!this.hostLogic) {
                         this.initHostLogic();
-                        this.hostLogic.init(this.wordSets);
+                        // Only initialize if assets are already loaded, otherwise the assets fetch callback will do it
+                        if (this.assetsLoaded) {
+                            this.hostLogic.init(this.wordSets);
+                            this.hostLogicInitialized = true;
+                        }
                     } else {
                         // Ensure existing hostLogic is aware of all current players
                         this.players.forEach(p => {
@@ -778,7 +812,20 @@ createApp({
 
         // HOST ACTIONS
         startGame() {
-            if (this.hostLogic) this.hostLogic.startGame();
+            if (!this.hostLogic) {
+                this.showNotification("Game logic not initialized", "error");
+                return;
+            }
+            if (!this.assetsLoaded || !this.wordSets || Object.keys(this.wordSets).length === 0) {
+                this.showNotification("Word sets are still loading. Please wait...", "error");
+                return;
+            }
+            if (!this.hostLogicInitialized) {
+                // Initialize hostLogic with wordSets if not already done
+                this.hostLogic.init(this.wordSets);
+                this.hostLogicInitialized = true;
+            }
+            this.hostLogic.startGame();
         },
         startActiveRound() {
             if (this.socket) {

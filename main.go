@@ -4,6 +4,8 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"patty/server"
 )
@@ -16,12 +18,24 @@ func main() {
 	hub := server.NewHub()
 	go hub.Run()
 
+	// Get the directory where the binary is located
+	ex, err := os.Executable()
+	if err != nil {
+		log.Printf("Warning: could not get executable path: %v. Using relative paths.", err)
+		ex = "./server_bin"
+	}
+	binDir := filepath.Dir(ex)
+	staticDir := filepath.Join(binDir, "static")
+	indexPath := filepath.Join(staticDir, "index.html")
+
+	log.Printf("Serving static files from: %s", staticDir)
+
 	// Serve the extracted assets.json specially if needed, or just let static handle it if it's in static/
 	// static/assets.json is already there.
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(staticDir))))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "static/index.html")
+		http.ServeFile(w, r, indexPath)
 	})
 
 	// WebSocket endpoint
@@ -55,7 +69,7 @@ func main() {
 	})
 
 	log.Printf("Server starting on %s...", *addr)
-	err := http.ListenAndServe(*addr, nil)
+	err = http.ListenAndServe(*addr, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}
