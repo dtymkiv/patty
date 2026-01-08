@@ -241,6 +241,7 @@
         }
     </style>
     <script src="/static/game_host.js"></script>
+    <script src="/static/i18n.js"></script>
 </head>
 
 <body :class="{ 'dark': isDarkMode }">
@@ -280,7 +281,7 @@
                         </div>
                     </template>
                     <template v-else>
-                        <span class="whitespace-nowrap">Playing as:</span>
+                        <span class="whitespace-nowrap">{{ t('playingAs') }}</span>
                         <div class="flex items-center gap-1">
                             <span
                                 class="font-bold text-gray-900 dark:text-white truncate max-w-[100px] sm:max-w-none">{{
@@ -297,27 +298,48 @@
                         </div>
                     </template>
                 </div>
-                <button @click="toggleTheme"
-                    class="relative inline-flex h-6 w-11 sm:h-8 sm:w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-200 dark:bg-gray-700 shadow-inner group"
-                    :title="isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
-                    <span class="sr-only">Toggle theme</span>
-                    <span aria-hidden="true" :class="isDarkMode ? 'translate-x-5 sm:translate-x-6' : 'translate-x-0'"
-                        class="pointer-events-none flex items-center justify-center h-5 w-5 sm:h-7 sm:w-7 transform rounded-full bg-white dark:bg-gray-900 shadow-lg ring-0 transition duration-200 ease-in-out">
-                        <!-- Sun icon -->
-                        <svg v-if="!isDarkMode" xmlns="http://www.w3.org/2000/svg"
-                            class="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M10 1a1 1 0 011 1v1a1 1 0 11-2 0V2a1 1 0 011-1zm4.243 1.757a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM19 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-4.757 4.243a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM10 19a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zm-4.243-1.757a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM1 10a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1zm1.757-4.243a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM10 14a4 4 0 100-8 4 4 0 000 8z"
-                                clip-rule="evenodd" />
+                <div class="relative">
+                    <button @click="showSettingsModal = !showSettingsModal"
+                        class="p-1 transition-colors hover:opacity-70"
+                        :title="t('settings')">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6 text-gray-400 dark:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        <!-- Moon icon -->
-                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 sm:h-4 sm:w-4 text-blue-400"
-                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                        </svg>
-                    </span>
-                </button>
+                    </button>
+                    <!-- Settings Dropdown -->
+                    <div v-if="showSettingsModal" 
+                        class="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-4 z-50 animate-slide-in">
+                        <div class="space-y-4">
+                            <!-- Theme Toggle -->
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-gray-600 dark:text-gray-300">{{ t('theme') }}</span>
+                                <button @click="toggleTheme"
+                                    class="relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-gray-200 dark:bg-gray-700 shadow-inner">
+                                    <span aria-hidden="true" :class="isDarkMode ? 'translate-x-5' : 'translate-x-0'"
+                                        class="pointer-events-none flex items-center justify-center h-6 w-6 transform rounded-full bg-white dark:bg-gray-900 shadow-lg ring-0 transition duration-200 ease-in-out">
+                                        <svg v-if="!isDarkMode" xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M10 1a1 1 0 011 1v1a1 1 0 11-2 0V2a1 1 0 011-1zm4.243 1.757a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 0zM19 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zm-4.757 4.243a1 1 0 01-1.414 0l-.707-.707a1 1 0 111.414-1.414l.707.707a1 1 0 010 1.414zM10 19a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zm-4.243-1.757a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM1 10a1 1 0 011-1h1a1 1 0 110 2H2a1 1 0 01-1-1zm1.757-4.243a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414zM10 14a4 4 0 100-8 4 4 0 000 8z" clip-rule="evenodd" />
+                                        </svg>
+                                        <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                                        </svg>
+                                    </span>
+                                </button>
+                            </div>
+                            <!-- Language Selector -->
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-bold text-gray-600 dark:text-gray-300">{{ t('language') }}</span>
+                                <select v-model="lang" @change="setLang(lang)"
+                                    class="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] text-sm font-medium">
+                                    <option v-for="l in getLanguages()" :key="l" :value="l">{{ getLangName(l) }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Backdrop to close dropdown -->
+                    <div v-if="showSettingsModal" @click="showSettingsModal = false" class="fixed inset-0 z-40"></div>
+                </div>
             </div>
         </header>
 
@@ -327,11 +349,11 @@
                 class="bg-white dark:bg-gray-800 p-10 rounded-3xl shadow-2xl w-full max-w-lg flex flex-col items-center border border-gray-200 dark:border-gray-700/50 transition-colors duration-300">
                 <img src="/static/logo.svg" alt="Logo"
                     class="h-24 w-auto mb-8 drop-shadow-[0_8px_20px_rgba(234,81,40,0.25)] animate-pulse-subtle">
-                <h2 class="text-3xl mb-8 font-black w-full text-center text-gray-900 dark:text-gray-100">Enter Nickname
+                <h2 class="text-3xl mb-8 font-black w-full text-center text-gray-900 dark:text-gray-100">{{ t('enterNickname') }}
                 </h2>
                 <div class="w-full mb-4">
                     <input v-model="nicknameInput" @keyup.enter="setNickname" type="text"
-                        placeholder="Your cool nickname..." maxlength="20"
+                        :placeholder="t('nicknamePlaceholder')" maxlength="20"
                         class="w-full p-3 rounded bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300">
                     <button @click="generateRandomName" type="button"
                         class="w-full mt-2 text-sm text-gray-500 dark:text-gray-400 hover:text-[#ea5128] dark:hover:text-[#ea5128] font-bold transition-colors flex items-center justify-center gap-2">
@@ -340,12 +362,11 @@
                                 d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
                                 clip-rule="evenodd" />
                         </svg>
-                        Generate random name
+                        {{ t('generateRandom') }}
                     </button>
                 </div>
                 <button @click="setNickname"
-                    class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-bold py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95">Enter
-                    Lobby</button>
+                    class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-bold py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95">{{ t('enterLobby') }}</button>
             </div><!-- -->
             <div v-else-if="view === 'lobby'"
                 class="w-full max-w-4xl px-4 sm:px-4 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mx-auto shrink-0 pb-8">
@@ -353,14 +374,14 @@
                 <!-- Join Room by Code -->
                 <div
                     class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300 flex flex-col items-center justify-center text-center">
-                    <h2 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-6">Join with Code</h2>
+                    <h2 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-6">{{ t('joinWithCode') }}</h2>
                     <div class="flex flex-col w-full max-w-xs gap-4">
                         <input v-model="joinCodeInput" type="text" inputmode="numeric" pattern="[0-9]*"
                             @input="handleJoinCodeInput" @keyup.enter="joinRoomByCode" placeholder="123456" maxlength="6"
                             class="text-center text-3xl tracking-[0.5em] font-mono p-4 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-4 focus:ring-[#ea5128] uppercase transition-all">
                         <button @click="joinRoomByCode" :disabled="joinCodeInput.length !== 6"
                             class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-black py-4 rounded-xl transition-all shadow-lg hover:shadow-[#ea512833] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                            JOIN GAME
+                            {{ t('joinGame') }}
                         </button>
                     </div>
                 </div>
@@ -368,14 +389,14 @@
                 <!-- Create Room -->
                 <div
                     class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300 text-center flex flex-col items-center justify-center">
-                    <h2 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">Host a Game</h2>
+                    <h2 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">{{ t('hostGame') }}</h2>
                     <p class="text-gray-500 dark:text-gray-400 mb-8 font-medium italic">
-                        Start a new room and share the 6-digit code with your friends.
+                        {{ t('hostDescription') }}
                     </p>
 
                     <button @click="createRoom"
                         class="w-full bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl transition-all shadow-lg hover:shadow-green-500/20 active:scale-95 uppercase tracking-widest text-sm">
-                        CREATE NEW GAME
+                        {{ t('createNewGame') }}
                     </button>
                 </div>
             </div><!-- -->
@@ -393,9 +414,9 @@
                                     d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
                                     clip-rule="evenodd" />
                             </svg>
-                            <span class="text-sm sm:text-base">Leave</span>
+                            <span class="text-sm sm:text-base">{{ t('leave') }}</span>
                         </button>
-                        <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">Code: {{ roomCode }}</span>
+                        <span class="text-xs text-gray-400 dark:text-gray-500 font-mono">{{ t('code') }}: {{ roomCode }}</span>
                     </div>
                     <div class="flex gap-2 sm:gap-4">
                         <div v-if="gameState === 'lobby'" class="flex gap-2 sm:gap-4">
@@ -410,16 +431,16 @@
                             <button @click="toggleReady"
                                 :class="amIReady ? 'bg-gray-400 dark:bg-gray-600 hover:bg-gray-500' : 'bg-[#ea5128] hover:bg-[#c1381b]'"
                                 class="px-3 sm:px-6 py-2 rounded-xl font-black text-white transition-all shadow-md active:scale-95 whitespace-nowrap text-sm sm:text-base">
-                                {{ amIReady ? 'Unready' : 'Ready' }}
+                                {{ amIReady ? t('unready') : t('ready') }}
                             </button>
                             <button v-if="amIHost" @click="startGame" :disabled="!canStart"
                                 :class="canStart ? 'bg-yellow-500 hover:bg-yellow-400 text-black' : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'"
                                 class="px-3 sm:px-6 py-2 rounded-xl font-black transition-all shadow-md whitespace-nowrap text-sm sm:text-base">
-                                Start Game
+                                {{ t('startGame') }}
                             </button>
                         </div>
                         <div v-else class="text-[#ea5128] font-black text-xl animate-pulse tracking-widest uppercase">
-                            Live!
+                            {{ t('live') }}
                         </div>
                     </div>
                 </div>
@@ -430,24 +451,23 @@
                         class="game-area-container order-1 lg:order-none lg:col-span-2 flex flex-col shrink-0 lg:shrink bg-white dark:bg-gray-900 sm:rounded-2xl border-0 sm:border border-gray-200 dark:border-gray-700 relative shadow-xl transition-colors duration-300 min-h-0">
                         <div v-if="gameState === 'lobby'" class="w-full max-w-2xl px-6 py-10 h-fit mx-auto">
                             <h3 class="text-3xl font-black mb-10 text-center text-[#ea5128] uppercase tracking-wider">
-                                Settings</h3>
+                                {{ t('settings') }}</h3>
 
                             <div class="space-y-8">
                                 <!-- Host Role -->
                                 <div>
                                     <label
-                                        class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-2">Host
-                                        Role</label>
+                                        class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-2">{{ t('hostRole') }}</label>
                                     <div class="flex gap-4">
                                         <button @click="setHostRole('player')" :disabled="!amIHost"
                                             :class="gameConfig.host_role === 'player' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
                                             class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
-                                            Player
+                                            {{ t('player') }}
                                         </button>
                                         <button @click="setHostRole('spectator')" :disabled="!amIHost"
                                             :class="gameConfig.host_role === 'spectator' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
                                             class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
-                                            Spectator
+                                            {{ t('spectator') }}
                                         </button>
                                     </div>
                                 </div>
@@ -456,8 +476,7 @@
                                 <div>
                                     <div class="flex justify-between mb-2">
                                         <label
-                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">Round
-                                            Duration</label>
+                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('roundDuration') }}</label>
                                         <span class="text-[#ea5128] font-black">{{ gameConfig.round_duration
                                             }}s</span>
                                     </div>
@@ -471,8 +490,7 @@
                                 <div>
                                     <div class="flex justify-between mb-2">
                                         <label
-                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">Points
-                                            to Win</label>
+                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('pointsToWin') }}</label>
                                         <span class="text-[#ea5128] font-black">{{ gameConfig.points_to_win
                                             }}</span>
                                     </div>
@@ -486,8 +504,7 @@
                                 <div>
                                     <div class="flex justify-between mb-2">
                                         <label
-                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">Base
-                                            Points (First Guess)</label>
+                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('basePoints') }}</label>
                                         <span class="text-[#ea5128] font-black">{{ gameConfig.base_points || 10
                                             }}</span>
                                     </div>
@@ -500,18 +517,17 @@
                                 <!-- Turn Order -->
                                 <div>
                                     <label
-                                        class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-2">Turn
-                                        Order</label>
+                                        class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-2">{{ t('turnOrder') }}</label>
                                     <div class="flex gap-4">
                                         <button @click="setTurnOrder('sequence')" :disabled="!amIHost"
                                             :class="gameConfig.turn_order === 'sequence' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
                                             class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
-                                            Sequential
+                                            {{ t('sequential') }}
                                         </button>
                                         <button @click="setTurnOrder('winner')" :disabled="!amIHost"
                                             :class="gameConfig.turn_order === 'winner' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
                                             class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
-                                            Winner First
+                                            {{ t('winnerFirst') }}
                                         </button>
                                     </div>
                                 </div>
@@ -520,7 +536,7 @@
                                 <div class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label
-                                            class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1.5">Language</label>
+                                            class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1.5">{{ t('language') }}</label>
                                         <select v-model="gameConfig.word_language" @change="updateConfig"
                                             :disabled="!amIHost"
                                             class="w-full p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300 text-sm">
@@ -531,7 +547,7 @@
 
                                     <div v-if="availableDifficulties.length > 0">
                                         <label
-                                            class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1.5">Difficulty</label>
+                                            class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1.5">{{ t('difficulty') }}</label>
                                         <select v-model="gameConfig.word_difficulty" @change="updateConfig"
                                             :disabled="!amIHost"
                                             class="w-full p-2.5 rounded-xl bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] transition-colors duration-300 text-sm">
@@ -543,9 +559,7 @@
 
                             </div>
 
-                            <p v-if="!amIHost" class="mt-8 text-center text-gray-500 text-sm italic">Only the host
-                                can
-                                change settings.</p>
+                            <p v-if="!amIHost" class="mt-8 text-center text-gray-500 text-sm italic">{{ t('onlyHostSettings') }}</p>
                         </div>
 
                         <div v-else
@@ -598,7 +612,7 @@
                                 <div class="flex items-center justify-end text-[10px] sm:text-xs">
                                     <div v-if="amIDrawing"
                                         class="text-green-600 dark:text-green-400 font-black uppercase tracking-widest bg-green-500/10 px-2 py-1 rounded-lg border border-green-500/20">
-                                        Drawing
+                                        {{ t('drawing') }}
                                     </div>
                                     <div v-else
                                         class="text-[#ea5128] font-black uppercase tracking-widest bg-[#ea5128]/10 px-2 py-1 rounded-lg border border-[#ea5128]/20 truncate max-w-[80px] sm:max-w-[120px]"
@@ -613,7 +627,7 @@
                                 class="absolute inset-0 z-20 flex items-center justify-center bg-black/40 rounded-lg">
                                 <button @click="startActiveRound"
                                     class="bg-green-600 hover:bg-green-500 text-white text-2xl font-bold py-6 px-12 rounded-xl shadow-2xl transform hover:scale-105 transition-all">
-                                    START ROUND!
+                                    {{ t('startRound') }}
                                 </button>
                             </div>
 
@@ -671,19 +685,19 @@
                                     <input v-model="chatInput" @keyup.enter="sendChat" type="text"
                                         @focus="handleInputFocus" @blur="handleInputBlur"
                                         :disabled="hasGuessed && gameStateData.phase === 'DRAWING'"
-                                        :placeholder="gameState === 'lobby' ? 'Type a message...' : (amIHost && gameConfig.host_role === 'spectator' ? 'Type a message...' : (hasGuessed ? 'You guessed correctly!' : 'Type a guess...'))"
+                                        :placeholder="gameState === 'lobby' ? t('typeMessage') : (amIHost && gameConfig.host_role === 'spectator' ? t('typeMessage') : (hasGuessed ? t('guessedCorrectly') : t('typeGuess')))"
                                         class="flex-1 p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-transparent focus:outline-none focus:ring-2 focus:ring-[#ea5128] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300">
                                     <button v-if="!isMobileView" @click="sendChat" @mousedown.prevent
                                         :disabled="hasGuessed && gameStateData.phase === 'DRAWING'"
                                         class="bg-[#ea5128] hover:bg-[#c1381b] text-white px-4 py-2 rounded-xl font-bold transition-all active:scale-95 disabled:opacity-50">
-                                        Send
+                                        {{ t('send') }}
                                     </button>
                                 </div>
 
                                 <!-- Generic Info (Phase transitions) -->
                                 <div v-if="gameStateData.phase === 'POST_ROUND' || gameStateData.phase === 'GAME_OVER' || gameStateData.phase === 'DRAWER_PREPARING'"
                                     class="text-center py-2 text-sm font-bold text-gray-500">
-                                    Round processing...
+                                    {{ t('roundProcessing') }}
                                 </div>
                             </div>
                         </div>
@@ -698,7 +712,7 @@
                                 class="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col h-[100px] lg:h-auto lg:min-h-0 flex-none lg:flex-1 border border-gray-200 dark:border-gray-700 shadow-xl transition-colors duration-300 mt-2 sm:mt-0 mx-2 sm:mx-0">
                                 <h3
                                     class="font-black mb-1 sm:mb-3 text-gray-400 dark:text-gray-500 uppercase text-[10px] tracking-widest shrink-0">
-                                    Chat</h3>
+                                    {{ t('chat') }}</h3>
                                 <div class="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900/50 rounded-xl p-2 mb-0 space-y-1.5 border border-gray-100 dark:border-transparent shadow-inner"
                                     id="chat-box">
                                     <div v-for="(msg, i) in displayedMessages" :key="i" class="text-sm">
@@ -715,7 +729,7 @@
                                 class="bg-white dark:bg-gray-800 p-2 sm:p-4 rounded-xl sm:rounded-2xl flex flex-col min-h-[150px] lg:min-h-0 flex-1 border border-gray-200 dark:border-gray-700 shadow-xl transition-colors duration-300 mx-2 sm:mx-0 mb-4 sm:mb-0">
                                 <h3
                                     class="font-black mb-1 sm:mb-3 text-gray-400 dark:text-gray-500 uppercase text-[10px] tracking-widest shrink-0">
-                                    Players ({{ players.length }})</h3>
+                                    {{ t('players') }} ({{ players.length }})</h3>
                                 <ul class="space-y-1.5 overflow-y-auto flex-1 pr-1">
                                     <li v-for="p in players" :key="p.nickname"
                                         class="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded-xl transition-all duration-300 border-2 border-transparent"
@@ -734,7 +748,7 @@
                                                     class="absolute -top-1 -right-1 text-xs">👑</span>
                                             </div>
                                             <span class="truncate max-w-[100px] font-bold" :style="{color: p.color, opacity: p.is_spectator ? 0.5 : 1}">{{
-                                                p.nickname }}</span><span v-if="p.nickname === nickname" class="text-xs text-gray-500 dark:text-gray-400 italic font-bold ml-1 flex-shrink-0">(you)</span>
+                                                p.nickname }}</span><span v-if="p.nickname === nickname" class="text-xs text-gray-500 dark:text-gray-400 italic font-bold ml-1 flex-shrink-0">{{ t('you') }}</span>
                                         </div>
 
                                         <div class="flex items-center gap-2">
@@ -773,9 +787,9 @@
                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
-                <h3 class="text-3xl font-black mb-4 uppercase tracking-wider">Game Paused</h3>
+                <h3 class="text-3xl font-black mb-4 uppercase tracking-wider">{{ t('gamePaused') }}</h3>
                 <p class="text-gray-300 text-lg mb-8">
-                    The Host has disconnected. Waiting for them to reconnect...
+                    {{ t('hostDisconnectedWaiting') }}
                 </p>
                 <div class="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
                     <div class="h-full bg-yellow-500 animate-progress"></div>
@@ -788,9 +802,8 @@
             class="fixed inset-0 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-[60] text-center p-4">
             <h2
                 class="text-5xl font-black text-gray-900 dark:text-white mb-2 drop-shadow-lg uppercase tracking-tighter">
-                GAME OVER!</h2>
-            <p class="text-xl text-gray-600 dark:text-gray-300 mb-6 font-bold uppercase tracking-widest">The
-                word was: <span class="text-green-600 dark:text-green-400 font-black">{{
+                {{ t('gameOver') }}</h2>
+            <p class="text-xl text-gray-600 dark:text-gray-300 mb-6 font-bold uppercase tracking-widest">{{ t('wordWas') }} <span class="text-green-600 dark:text-green-400 font-black">{{
                     gameStateData.word }}</span></p>
 
             <div
@@ -800,7 +813,7 @@
                     class="mb-8 text-center bg-yellow-50 dark:bg-yellow-500/10 p-4 rounded-2xl border-2 border-yellow-200 dark:border-yellow-500/20">
                     <div
                         class="text-[10px] text-yellow-600 dark:text-yellow-400 font-black uppercase tracking-widest mb-1">
-                        Winner
+                        {{ t('winner') }}
                     </div>
                     <div
                         class="text-4xl font-black text-yellow-600 dark:text-yellow-400 flex items-center justify-center gap-3">
@@ -812,7 +825,7 @@
                 </div>
 
                 <h3 class="text-gray-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-widest mb-4">
-                    Leaderboard</h3>
+                    {{ t('leaderboard') }}</h3>
                 <ul class="space-y-2">
                     <li v-for="(p, idx) in sortedPlayers" :key="p.nickname"
                         class="flex justify-between items-center p-3 rounded-xl bg-gray-50 dark:bg-gray-700/50 border border-transparent"
@@ -823,7 +836,7 @@
                                 }}</span>
                             <span
                                 :class="idx === 0 ? 'font-black text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300 font-bold'">{{
-                                p.nickname }}<span v-if="p.nickname === nickname" class="text-xs text-gray-500 dark:text-gray-400 italic font-bold ml-1">(you)</span></span>
+                                p.nickname }}<span v-if="p.nickname === nickname" class="text-xs text-gray-500 dark:text-gray-400 italic font-bold ml-1">{{ t('you') }}</span></span>
                         </div>
                         <span class="font-black"
                             :class="idx === 0 ? 'text-yellow-600 dark:text-yellow-400' : 'text-gray-400 dark:text-gray-400'">{{
@@ -833,11 +846,11 @@
                 </ul>
                 <button v-if="amIHost" @click="startGame"
                     class="mt-8 w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-2xl shadow-xl hover:shadow-blue-500/20 transition-all active:scale-95 text-lg">
-                    Play Again
+                    {{ t('playAgain') }}
                 </button>
                 <button @click="handleLeaveRequest"
                     class="mt-4 w-full text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 font-bold py-2 transition-colors text-sm uppercase tracking-widest">
-                    Leave Room
+                    {{ t('leaveRoom') }}
                 </button>
             </div>
         </div>
@@ -861,12 +874,12 @@
                     <div class="flex-1">
                         <h2
                             class="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-wider leading-none">
-                            Next Up: <span class="text-[#ea5128]">{{ gameStateData.drawer }}</span>
+                            {{ t('nextUp') }} <span class="text-[#ea5128]">{{ gameStateData.drawer }}</span>
                         </h2>
                         <p v-if="gameStateData.phase === 'DRAWER_PREPARING' && gameStateData.last_drawer"
                             class="text-[#ea5128] text-sm font-bold flex items-center gap-1 mt-1">
                             <span class="text-gray-500 dark:text-gray-400">{{ gameStateData.last_drawer
-                                }}</span> was drawing
+                                }}</span> {{ t('wasDrawing') }}
                             <span
                                 class="text-gray-900 dark:text-white uppercase tracking-widest px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{{
                                 gameStateData.last_word }}</span>
@@ -895,8 +908,8 @@
                                 <div class="flex justify-between items-end mb-0.5">
                                     <span class="font-black text-gray-800 dark:text-gray-200 text-base">{{
                                         res.nickname }} <span v-if="res.nickname === nickname"
-                                            class="text-xs text-gray-500 dark:text-gray-400 italic font-bold">(you)</span><span v-if="res.nickname === gameStateData.last_drawer"
-                                            class="text-xs text-[#ea5128] italic font-bold">(Drawer)</span></span>
+                                            class="text-xs text-gray-500 dark:text-gray-400 italic font-bold">{{ t('you') }}</span><span v-if="res.nickname === gameStateData.last_drawer"
+                                            class="text-xs text-[#ea5128] italic font-bold">{{ t('drawer') }}</span></span>
                                     <span v-if="gameStateData.last_drawer"
                                         class="text-green-600 dark:text-green-400 font-black text-xl animate-pulse">+{{
                                         res.points
@@ -915,16 +928,16 @@
                                 </div>
                                 <div class="flex justify-between mt-0.5">
                                     <span
-                                        class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">Total:
+                                        class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">{{ t('total') }}
                                         <span class="text-gray-900 dark:text-white">{{
                                             getBaseScore(res.nickname) +
                                             res.points }}</span></span>
                                     <span v-if="res.nickname === gameStateData.last_drawer"
                                         class="text-[9px] text-gray-400 italic">
-                                        guessed in {{ res.time }}s
+                                        {{ t('guessedIn') }} {{ res.time }}s
                                     </span>
                                     <span v-else-if="res.time"
-                                        class="text-[9px] text-gray-400 italic font-bold">Guessed in
+                                        class="text-[9px] text-gray-400 italic font-bold">{{ t('guessedIn') }}
                                         {{
                                         res.time }}s</span>
                                 </div>
@@ -950,8 +963,8 @@
                         <div class="flex-1">
                             <div class="flex justify-between items-end mb-0.5">
                                 <span class="font-black text-gray-800 dark:text-gray-200 text-base">{{
-                                    myResultEntry.nickname }} <span class="text-xs text-gray-500 dark:text-gray-400 italic font-bold">(you)</span><span v-if="myResultEntry.nickname === gameStateData.last_drawer"
-                                        class="text-xs text-[#ea5128] italic font-bold">(Drawer)</span></span>
+                                    myResultEntry.nickname }} <span class="text-xs text-gray-500 dark:text-gray-400 italic font-bold">{{ t('you') }}</span><span v-if="myResultEntry.nickname === gameStateData.last_drawer"
+                                        class="text-xs text-[#ea5128] italic font-bold">{{ t('drawer') }}</span></span>
                                 <span v-if="gameStateData.last_drawer"
                                     class="text-green-600 dark:text-green-400 font-black text-xl animate-pulse">+{{
                                     myResultEntry.points
@@ -970,16 +983,16 @@
                             </div>
                             <div class="flex justify-between mt-0.5">
                                 <span
-                                    class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">Total:
+                                    class="text-[10px] text-gray-500 dark:text-gray-400 font-black uppercase tracking-widest">{{ t('total') }}
                                     <span class="text-gray-900 dark:text-white">{{
                                         getBaseScore(myResultEntry.nickname) +
                                         myResultEntry.points }}</span></span>
                                 <span v-if="myResultEntry.nickname === gameStateData.last_drawer"
                                     class="text-[9px] text-gray-400 italic">
-                                    guessed in {{ myResultEntry.time }}s
+                                    {{ t('guessedIn') }} {{ myResultEntry.time }}s
                                 </span>
                                 <span v-else-if="myResultEntry.time"
-                                    class="text-[9px] text-gray-400 italic font-bold">Guessed in
+                                    class="text-[9px] text-gray-400 italic font-bold">{{ t('guessedIn') }}
                                     {{
                                     myResultEntry.time }}s</span>
                             </div>
@@ -990,7 +1003,7 @@
                 <div class="p-8 bg-gray-50 dark:bg-gray-900/50 text-center flex flex-col items-center gap-6">
                     <p v-if="gameStateData.phase === 'DRAWER_PREPARING' && amIDrawing"
                         class="text-gray-600 dark:text-gray-400 text-xs font-black uppercase tracking-[0.2em] mb-[-1rem]">
-                        Your word is
+                        {{ t('yourWord') }}
                     </p>
                     <div v-if="gameStateData.phase === 'DRAWER_PREPARING' && amIDrawing"
                         class="text-4xl font-black text-[#ea5128] uppercase tracking-tighter mb-2">
@@ -1001,7 +1014,7 @@
                         <template v-if="amIDrawing">
                             <button @click="startActiveRound"
                                 class="w-full py-5 bg-green-600 hover:bg-green-500 text-white rounded-2xl font-black text-2xl shadow-xl hover:shadow-green-500/20 transition-all animate-bounce-subtle">
-                                START ROUND!
+                                {{ t('startRound') }}
                             </button>
                         </template>
                         <template v-else>
@@ -1015,7 +1028,7 @@
                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
                                     </path>
                                 </svg>
-                                <span class="font-black uppercase tracking-widest text-sm">Wait for <span
+                                <span class="font-black uppercase tracking-widest text-sm">{{ t('waitFor') }} <span
                                         class="text-[#ea5128]">{{
                                         gameStateData.drawer }}</span></span>
                             </div>
@@ -1037,10 +1050,9 @@
                             d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                     </svg>
                 </div>
-                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">Invite
-                    Friends</h3>
+                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">{{ t('inviteFriends') }}</h3>
                 <p class="text-gray-600 dark:text-gray-300 mb-6 font-medium">
-                    Share this link or QR code to invite players
+                    {{ t('shareLink') }}
                 </p>
 
                 <!-- QR Code Container -->
@@ -1058,11 +1070,11 @@
                 <div class="flex flex-col space-y-3">
                     <button @click="copyInviteLink"
                         class="w-full py-3 bg-blue-500 hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 text-white font-black rounded-xl shadow-lg hover:shadow-blue-500/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
-                        {{ linkCopied ? '✓ Copied!' : 'Copy Link' }}
+                        {{ linkCopied ? t('copied') : t('copyLink') }}
                     </button>
                     <button @click="closeInviteModal"
                         class="w-full py-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 font-bold rounded-xl transition-colors uppercase tracking-widest text-sm">
-                        Close
+                        {{ t('close') }}
                     </button>
                 </div>
             </div>
@@ -1080,19 +1092,19 @@
                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
-                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">End Session?
+                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">{{ t('endSession') }}
                 </h3>
                 <p class="text-gray-600 dark:text-gray-300 mb-8 font-medium italic">
-                    As the host, leaving will close this room for all players.
+                    {{ t('hostLeaveWarning') }}
                 </p>
                 <div class="flex flex-col space-y-3">
                     <button @click="confirmHostLeave"
                         class="w-full py-4 bg-red-500 hover:bg-red-600 text-white font-black rounded-xl shadow-lg hover:shadow-red-500/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
-                        LEAVE & CLOSE ROOM
+                        {{ t('leaveCloseRoom') }}
                     </button>
                     <button @click="showLeaveModal = false"
                         class="w-full py-4 text-gray-500 dark:text-gray-400 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all uppercase tracking-widest text-sm">
-                        STAY IN GAME
+                        {{ t('stayInGame') }}
                     </button>
                 </div>
             </div>
@@ -1110,23 +1122,24 @@
                             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
-                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">Leave Game?
+                <h3 class="text-2xl font-black mb-2 text-gray-900 dark:text-white uppercase tracking-tight">{{ t('leaveGame') }}
                 </h3>
                 <p class="text-gray-600 dark:text-gray-300 mb-8 font-medium italic">
-                    You will be unable to reconnect to this game once you leave. Are you sure?
+                    {{ t('playerLeaveWarning') }}
                 </p>
                 <div class="flex flex-col space-y-3">
                     <button @click="confirmPlayerLeave"
                         class="w-full py-4 bg-orange-500 hover:bg-orange-600 text-white font-black rounded-xl shadow-lg hover:shadow-orange-500/20 transition-all active:scale-95 uppercase tracking-widest text-sm">
-                        LEAVE GAME
+                        {{ t('leaveGameBtn') }}
                     </button>
                     <button @click="showPlayerLeaveModal = false"
                         class="w-full py-4 text-gray-500 dark:text-gray-400 font-bold hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all uppercase tracking-widest text-sm">
-                        STAY IN GAME
+                        {{ t('stayInGame') }}
                     </button>
                 </div>
             </div>
         </div>
+
 
         <!-- Notifications Overlay -->
         <div class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">

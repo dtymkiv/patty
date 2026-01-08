@@ -7,6 +7,7 @@ createApp({
             nickname: '',
             nicknameInput: '',
             isEditingNickname: false,
+            lang: i18n.currentLang,
 
             // Lobby
             rooms: [],
@@ -88,6 +89,7 @@ createApp({
             showPlayerLeaveModal: false, // Modal for non-host player leaving during game
             showPasswordModal: false, // Legacy support?
             showInviteModal: false,
+            showSettingsModal: false,
             inviteLink: '',
             linkCopied: false,
             pendingRoomJoin: null,
@@ -252,6 +254,18 @@ createApp({
     mounted() {
         window.addEventListener('resize', this.handleResize);
 
+        // Clean up stale host_state entries from localStorage
+        const savedRoomCode = localStorage.getItem('roomCode');
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('host_state_')) {
+                const roomCode = key.replace('host_state_', '');
+                if (roomCode !== savedRoomCode) {
+                    localStorage.removeItem(key);
+                }
+            }
+        }
+
         // Load Assets (Word Sets)
         this.assetsLoaded = false;
         fetch('/static/assets.json')
@@ -289,7 +303,7 @@ createApp({
             })
             .catch(e => {
                 console.error("Failed to load assets", e);
-                this.showNotification("Failed to load word sets. Please refresh the page.", "error");
+                this.showNotification(this.t('failedToLoad'), "error");
                 this.assetsLoaded = false;
             });
 
@@ -354,12 +368,25 @@ createApp({
         setTimeout(() => this.syncButtonSizes(), 200);
     },
     methods: {
+        t(key) {
+            return translations[this.lang]?.[key] || translations.en[key] || key;
+        },
+        setLang(lang) {
+            i18n.setLang(lang);
+            this.lang = lang;
+        },
+        getLanguages() {
+            return i18n.getLanguages();
+        },
+        getLangName(code) {
+            return i18n.getLangName(code);
+        },
         checkMobile() {
             this.isMobileView = window.innerWidth < 1024;
         },
         generateRandomName() {
-            const adjectives = ['Happy', 'Silly', 'Brave', 'Clever', 'Swift', 'Mighty'];
-            const nouns = ['Panda', 'Tiger', 'Eagle', 'Fox', 'Wolf', 'Bear'];
+            const adjectives = this.t('adjectives');
+            const nouns = this.t('nouns');
             const adj = adjectives[Math.floor(Math.random() * adjectives.length)];
             const noun = nouns[Math.floor(Math.random() * nouns.length)];
             this.nicknameInput = `${adj}${noun}`;
@@ -426,7 +453,7 @@ createApp({
                 await this.connectWebSocket();
             } catch (e) {
                 console.error("createRoom error:", e);
-                this.showNotification("Failed to create room", "error");
+                this.showNotification(this.t('failedToCreate'), "error");
             }
         },
         joinRoomByCode() {
@@ -605,7 +632,7 @@ createApp({
 
                     this.socket.onclose = (event) => {
                         if (this.view === 'room') {
-                            this.showNotification("Disconnected", "error");
+                            this.showNotification(this.t('disconnected'), "error");
                             this.isHostDisconnected = true;
                         }
                     };
@@ -726,7 +753,7 @@ createApp({
                     });
                     // Show notification for new player joining
                     if (p.nickname !== this.nickname) {
-                        this.showNotification(`${p.nickname} joined`, 'info');
+                        this.showNotification(`${p.nickname} ${this.t('joined')}`, 'info');
                     }
                 } else {
                     // Player already exists - update connection status
@@ -734,7 +761,7 @@ createApp({
                     existingPlayer.is_host = p.is_host;
                     // Show notification if player was disconnected and now reconnected
                     if (wasDisconnected && p.nickname !== this.nickname) {
-                        this.showNotification(`${p.nickname} reconnected`, 'success');
+                        this.showNotification(`${p.nickname} ${this.t('reconnected')}`, 'success');
                     }
                 }
                 if (this.hostLogic) {
@@ -756,7 +783,7 @@ createApp({
                     this.players.splice(index, 1);
                     // Show notification for player intentionally leaving
                     if (nickname !== this.nickname) {
-                        this.showNotification(`${nickname} left`, 'error');
+                        this.showNotification(`${nickname} ${this.t('left')}`, 'error');
                     }
                 }
                 if (this.hostLogic) {
@@ -790,7 +817,7 @@ createApp({
                 }
                 // Show notification for player disconnecting (can reconnect)
                 if (nickname !== this.nickname) {
-                    this.showNotification(`${nickname} disconnected`, 'warning');
+                    this.showNotification(`${nickname} ${this.t('disconnected').toLowerCase()}`, 'warning');
                 }
                 if (this.hostLogic) {
                     if (!this.hostLogic.players[nickname]) {
@@ -874,12 +901,12 @@ createApp({
             } else if (msg.type === "HOST_DISCONNECTED") {
                 this.isHostDisconnected = true;
                 if (!this.amIHost) {
-                    this.showNotification("Host disconnected", 'warning');
+                    this.showNotification(this.t('hostDisconnected'), 'warning');
                 }
             } else if (msg.type === "HOST_RECONNECTED") {
                 this.isHostDisconnected = false;
                 if (!this.amIHost) {
-                    this.showNotification("Host reconnected", 'success');
+                    this.showNotification(this.t('hostReconnected'), 'success');
                 }
             } else if (msg.type === "CHAT") {
                 this.messages.push(msg.payload);
@@ -937,7 +964,7 @@ createApp({
                     return;
                 }
             } else if (msg.type === "ROOM_CLOSED") {
-                this.showNotification("Room closed by host", 'error');
+                this.showNotification(this.t('roomClosed'), 'error');
                 if (this.socket) {
                     this.socket.onclose = null;
                     this.socket.close();
@@ -950,11 +977,11 @@ createApp({
         // HOST ACTIONS
         startGame() {
             if (!this.hostLogic) {
-                this.showNotification("Game logic not initialized", "error");
+                this.showNotification(this.t('gameLogicNotInit'), "error");
                 return;
             }
             if (!this.assetsLoaded || !this.wordSets || Object.keys(this.wordSets).length === 0) {
-                this.showNotification("Word sets are still loading. Please wait...", "error");
+                this.showNotification(this.t('wordSetsLoading'), "error");
                 return;
             }
             if (!this.hostLogicInitialized) {
