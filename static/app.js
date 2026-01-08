@@ -430,10 +430,19 @@ createApp({
             }
         },
         joinRoomByCode() {
-            if (this.joinCodeInput.length !== 6) return;
-            this.roomCode = this.joinCodeInput;
+            const sanitized = (this.joinCodeInput || '').replace(/\D/g, '');
+            this.joinCodeInput = sanitized;
+            if (sanitized.length !== 6) return;
+            this.roomCode = sanitized;
             this.roomToken = null; // Join as player
             this.connectWebSocket();
+        },
+        handleJoinCodeInput(event) {
+            const digits = (event.target.value || '').replace(/\D/g, '').slice(0, 6);
+            if (this.joinCodeInput !== digits) {
+                this.joinCodeInput = digits;
+            }
+            event.target.value = digits;
         },
         initHostLogic() {
             // Use global GameHost class
