@@ -621,7 +621,7 @@
                                 :class="{ 'shake-error border-red-500': isShaking, 'success-border border-green-500': hasGuessed, 'border-transparent': !isShaking && !hasGuessed }"
                                 id="canvas-container">
                                 <canvas ref="gameCanvas"
-                                    class="w-full max-h-full block cursor-crosshair touch-none h-auto"
+                                    :class="['w-full max-h-full block cursor-crosshair h-auto', { 'touch-none': amIDrawing }]"
                                     style="aspect-ratio: 4/3;"></canvas>
                             </div>
 

@@ -1259,6 +1259,7 @@ createApp({
             canvas.addEventListener('mouseout', this.stopDrawing);
 
             canvas.addEventListener('touchstart', (e) => {
+                if (!this.amIDrawing) return;
                 e.preventDefault();
                 const touch = e.touches[0];
                 const mouseEvent = new MouseEvent('mousedown', {
@@ -1268,6 +1269,7 @@ createApp({
                 canvas.dispatchEvent(mouseEvent);
             }, { passive: false });
             canvas.addEventListener('touchmove', (e) => {
+                if (!this.amIDrawing) return;
                 e.preventDefault();
                 const touch = e.touches[0];
                 const mouseEvent = new MouseEvent('mousemove', {
@@ -1277,6 +1279,7 @@ createApp({
                 canvas.dispatchEvent(mouseEvent);
             }, { passive: false });
             canvas.addEventListener('touchend', () => {
+                if (!this.amIDrawing) return;
                 const mouseEvent = new MouseEvent('mouseup', {});
                 canvas.dispatchEvent(mouseEvent);
             });
