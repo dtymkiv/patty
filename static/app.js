@@ -13,7 +13,8 @@ createApp({
             rooms: [],
             newRoomPassword: '',
             joinCodeInput: '',
-            selectedGameType: 'drawing',
+            selectedGameType: 'alligator', // 'alligator' or 'telephone'
+            currentGameType: 'alligator', // Active game type in room
 
             // Room / Game
             currentRoomId: null, // Legacy ID support
@@ -94,7 +95,26 @@ createApp({
             linkCopied: false,
             pendingRoomJoin: null,
             playersWithIncorrectGuess: new Set(), // Track players who guessed incorrectly for animation
-            resultsListNeedsScroll: false // Track if results list needs scrolling
+            resultsListNeedsScroll: false, // Track if results list needs scrolling
+
+            // Telephone Game State
+            telephoneState: {
+                textInput: '',
+                guessInput: '',
+                currentAssignment: null, // { chainId, textToDraw/drawingToGuess }
+                myStrokeHistory: []
+            },
+            telephoneConfig: {
+                draw_duration: 90,
+                guess_duration: 45,
+                max_rounds: 0,
+                host_role: 'player'
+            },
+            telephoneResultsView: {
+                currentChainIndex: 0,
+                currentStepIndex: 0,
+                autoPlay: false
+            }
         }
     },
     computed: {
@@ -109,14 +129,15 @@ createApp({
         },
         canStart() {
             // Count active players (excluding host if spectator)
+            const hostRole = this.isTelephoneGame ? this.telephoneConfig.host_role : this.gameConfig.host_role;
             const activePlayers = this.players.filter(p => {
                 if (!p.connected) return false;
-                if (p.is_host && this.gameConfig.host_role === 'spectator') return false;
+                if (p.is_host && hostRole === 'spectator') return false;
                 return true;
             });
             
-            // If host is spectator, need 2 players; if host is player, need 1 additional player (2 total)
-            const minPlayers = 2;
+            // Telephone needs 3 players, Alligator needs 2
+            const minPlayers = this.isTelephoneGame ? 3 : 2;
             return activePlayers.length >= minPlayers;
         },
         amIDrawing() {
@@ -180,6 +201,37 @@ createApp({
             // Don't show for host in spectator mode
             if (this.amIHost && this.gameConfig.host_role === 'spectator') return null;
             return this.animatedResults.find(res => res.nickname === this.nickname) || null;
+        },
+        // Telephone game computed
+        isTelephoneGame() {
+            return this.currentGameType === 'telephone';
+        },
+        telephonePhase() {
+            return this.isTelephoneGame ? this.gameStateData.phase : null;
+        },
+        telephoneChains() {
+            return this.gameStateData.chains || {};
+        },
+        chainKeys() {
+            return Object.keys(this.telephoneChains);
+        },
+        currentChain() {
+            if (!this.chainKeys.length) return null;
+            const key = this.chainKeys[this.telephoneResultsView.currentChainIndex];
+            return this.telephoneChains[key];
+        },
+        currentChainAuthor() {
+            return this.chainKeys[this.telephoneResultsView.currentChainIndex] || '';
+        },
+        submittedPlayersCount() {
+            if (!this.gameStateData.submissions) return 0;
+            return Object.keys(this.gameStateData.submissions).length;
+        },
+        activePlayersCount() {
+            return (this.gameStateData.activePlayers || []).length;
+        },
+        hasSubmittedTelephone() {
+            return this.gameStateData.submissions && this.gameStateData.submissions[this.nickname];
         }
     },
     watch: {
@@ -204,14 +256,41 @@ createApp({
                 this.updateConfig();
             }
         },
+        'animatedResults'() {
+            // Check scroll when results change
+            this.$nextTick(() => {
+                setTimeout(() => this.checkResultsListScroll(), 100);
+            });
+        },
+        // Telephone game watchers for reliable canvas updates
+        'telephoneState.currentAssignment': {
+            handler(newVal, oldVal) {
+                if (!this.isTelephoneGame) return;
+                if (!newVal) return;
+                
+                this.$nextTick(() => {
+                    this.handleTelephoneAssignmentChange(newVal, oldVal);
+                });
+            },
+            deep: true
+        },
         'gameStateData.phase'(newVal, oldVal) {
+            // Handle telephone game phase changes
+            if (this.isTelephoneGame) {
+                if (newVal === 'DRAWING' || newVal === 'GUESSING') {
+                    // Request assignment if we don't have one for this phase
+                    this.$nextTick(() => {
+                        this.ensureTelephoneAssignment();
+                    });
+                }
+            }
+            
+            // Existing alligator game logic
             if (newVal === 'DRAWER_PREPARING' && oldVal !== 'DRAWER_PREPARING') {
                 this.startResultsAnimation();
-                // Check if scrolling is needed after animation starts
                 this.$nextTick(() => {
                     setTimeout(() => this.checkResultsListScroll(), 100);
                 });
-                // Sync button sizes when toolbar becomes visible (DRAWER_PREPARING phase)
                 if (this.amIDrawing) {
                     this.$nextTick(() => {
                         setTimeout(() => this.syncButtonSizes(), 200);
@@ -221,18 +300,11 @@ createApp({
                 this.animatedResults = [];
                 this.resultsListNeedsScroll = false;
             }
-            // Sync button sizes when phase changes to DRAWING (toolbar remains visible)
             if (newVal === 'DRAWING' && this.amIDrawing) {
                 this.$nextTick(() => {
                     setTimeout(() => this.syncButtonSizes(), 150);
                 });
             }
-        },
-        'animatedResults'() {
-            // Check scroll when results change
-            this.$nextTick(() => {
-                setTimeout(() => this.checkResultsListScroll(), 100);
-            });
         },
         amIDrawing(newVal) {
             if (newVal) {
@@ -249,17 +321,40 @@ createApp({
                     setTimeout(() => this.syncButtonSizes(), 150);
                 });
             }
+        },
+        'telephonePhase'(newVal, oldVal) {
+            // Initialize canvas for drawing phase
+            if (newVal === 'DRAWING') {
+                this.$nextTick(() => {
+                    this.initCanvas();
+                    this.performClear();
+                });
+            }
+            // Initialize canvas for guessing phase (to show drawing)
+            if (newVal === 'GUESSING') {
+                this.$nextTick(() => {
+                    this.initCanvas();
+                });
+            }
+            // Render chain drawings when entering results
+            if (newVal === 'RESULTS' || newVal === 'GAME_OVER') {
+                this.telephoneResultsView.currentChainIndex = 0;
+                this.telephoneResultsView.currentStepIndex = 0;
+                this.$nextTick(() => {
+                    setTimeout(() => this.renderChainDrawings(), 200);
+                });
+            }
         }
     },
     mounted() {
         window.addEventListener('resize', this.handleResize);
 
-        // Clean up stale host_state entries from localStorage
+        // Clean up stale state entries from localStorage
         const savedRoomCode = localStorage.getItem('roomCode');
         for (let i = localStorage.length - 1; i >= 0; i--) {
             const key = localStorage.key(i);
-            if (key?.startsWith('host_state_')) {
-                const roomCode = key.replace('host_state_', '');
+            if (key?.startsWith('host_state_') || key?.startsWith('telephone_state_')) {
+                const roomCode = key.replace('host_state_', '').replace('telephone_state_', '');
                 if (roomCode !== savedRoomCode) {
                     localStorage.removeItem(key);
                 }
@@ -472,8 +567,23 @@ createApp({
             event.target.value = digits;
         },
         initHostLogic() {
-            // Use global GameHost class
-            this.hostLogic = new GameHost(
+            // Check for saved state to determine game type
+            const savedTelephone = localStorage.getItem(`telephone_state_${this.roomCode}`);
+            const savedAlligator = localStorage.getItem(`host_state_${this.roomCode}`);
+            
+            // Determine game type from saved state if available
+            if (savedTelephone) {
+                try {
+                    const data = JSON.parse(savedTelephone);
+                    if (data.gameType === 'telephone' && data.state && data.state.phase !== 'LOBBY') {
+                        this.currentGameType = 'telephone';
+                    }
+                } catch (e) {}
+            }
+            
+            // Initialize based on game type
+            const HostClass = this.currentGameType === 'telephone' ? TelephoneHost : GameHost;
+            this.hostLogic = new HostClass(
                 (type, payload) => {
                     // Broadcast via Server
                     if (!this.socket) return;
@@ -525,66 +635,92 @@ createApp({
                 // Sync UI with restored state
                 this.players = this.hostLogic.getPlayersList();
                 const oldPhase = this.gameStateData.phase;
-                this.gameStateData = this.hostLogic.state;
-                this.gameConfig = this.hostLogic.config;
+                // Create a shallow copy to trigger Vue reactivity
+                this.gameStateData = { ...this.hostLogic.state };
                 this.gameState = this.gameStateData.phase === 'LOBBY' ? 'lobby' : 'playing';
                 
-                // Sync stroke history from restored state and redraw canvas
-                // Always redraw host's canvas if there's stroke history (host needs to see the drawing)
-                if (this.gameStateData.stroke_history && Array.isArray(this.gameStateData.stroke_history)) {
-                    this.strokeHistory = this.gameStateData.stroke_history;
-                    // Redraw canvas for host (whether they're drawer or not, they should see the current drawing)
-                    if (this.amIHost && this.strokeHistory.length > 0) {
-                        // Use setTimeout to ensure canvas is initialized
+                // Handle telephone game restoration - same pattern as Alligator
+                if (this.currentGameType === 'telephone') {
+                    this.telephoneConfig = this.hostLogic.config;
+                    
+                    // Restore current assignment (same as Alligator syncs drawer/word)
+                    if (this.gameStateData.currentAssignments && this.gameStateData.currentAssignments[this.nickname]) {
+                        this.telephoneState.currentAssignment = this.gameStateData.currentAssignments[this.nickname];
+                    }
+                    
+                    // Sync stroke history from restored state - SAME PATTERN AS ALLIGATOR
+                    if (this.gameStateData.strokeHistories && this.gameStateData.strokeHistories[this.nickname]) {
+                        this.telephoneState.myStrokeHistory = this.gameStateData.strokeHistories[this.nickname];
+                        if (this.telephoneState.myStrokeHistory.length > 0) {
+                            setTimeout(() => {
+                                if (!this.ctx) this.initCanvas();
+                                if (this.ctx && this.telephoneState.myStrokeHistory.length > 0) {
+                                    this.redrawFromHistory(this.telephoneState.myStrokeHistory);
+                                }
+                            }, 100);
+                        }
+                    }
+                    
+                    // For GUESSING phase, draw the image to guess
+                    if (this.gameStateData.phase === 'GUESSING' && this.telephoneState.currentAssignment?.drawingToGuess) {
                         setTimeout(() => {
                             if (!this.ctx) this.initCanvas();
-                            if (this.ctx && this.strokeHistory.length > 0) {
-                                // Redraw from history (which will clear canvas and redraw)
-                                this.redrawFromHistory(this.strokeHistory);
+                            if (this.ctx) {
+                                this.redrawFromHistory(this.telephoneState.currentAssignment.drawingToGuess);
                             }
                         }, 100);
                     }
-                }
-                
-                // Trigger results animation if phase is DRAWER_PREPARING (in case watcher didn't fire)
-                if (this.gameStateData.phase === 'DRAWER_PREPARING') {
-                    this.$nextTick(() => {
-                        this.startResultsAnimation();
-                    });
-                }
-                
-                // For DRAWING phase, broadcast state WITH stroke_history
-                // The canvas clearing logic checks for stroke_history before clearing, so it won't clear
-                // if strokes exist. This ensures host gets the current state (even if slightly outdated)
-                // and other players won't lose their strokes because the clearing logic won't trigger.
-                if (this.gameStateData.phase !== 'DRAWING') {
+                    
                     this.hostLogic.broadcastState();
+                    setTimeout(() => {
+                        this.hostLogic.resendAssignments();
+                    }, 200);
                 } else {
-                    // During DRAWING phase, broadcast state with stroke_history
-                    // This syncs everyone to the same state (host's restored state)
-                    // Canvas won't be cleared because stroke_history exists
+                    // Alligator game restoration
+                    this.gameConfig = this.hostLogic.config;
+                    
+                    // Sync stroke history from restored state and redraw canvas
+                    if (this.gameStateData.stroke_history && Array.isArray(this.gameStateData.stroke_history)) {
+                        this.strokeHistory = this.gameStateData.stroke_history;
+                        if (this.amIHost && this.strokeHistory.length > 0) {
+                            setTimeout(() => {
+                                if (!this.ctx) this.initCanvas();
+                                if (this.ctx && this.strokeHistory.length > 0) {
+                                    this.redrawFromHistory(this.strokeHistory);
+                                }
+                            }, 100);
+                        }
+                    }
+                    
+                    // Trigger results animation if phase is DRAWER_PREPARING
+                    if (this.gameStateData.phase === 'DRAWER_PREPARING') {
+                        this.$nextTick(() => {
+                            this.startResultsAnimation();
+                        });
+                    }
+                    
                     this.hostLogic.broadcastState();
                     
                     // Ensure timer is running after reconnection during DRAWING phase
-                    // The timer should have been restored in loadState(), but ensure it's running
-                    if (this.gameStateData.timer_end > 0 && !this.hostLogic.timerInterval) {
+                    if (this.gameStateData.phase === 'DRAWING' && this.gameStateData.timer_end > 0 && !this.hostLogic.timerInterval) {
                         const now = Date.now() / 1000;
                         if (now < this.gameStateData.timer_end) {
-                            // Timer hasn't expired, restart it
                             this.hostLogic.timerInterval = setInterval(() => {
                                 this.hostLogic.checkTimer();
                             }, 1000);
                         } else {
-                            // Timer expired, end round
                             this.hostLogic.endRound();
                         }
                     }
                 }
             }
 
-            // Initialize wordSets if assets are already loaded
-            if (this.assetsLoaded && this.wordSets && Object.keys(this.wordSets).length > 0) {
+            // Initialize wordSets if assets are already loaded (alligator only)
+            if (this.currentGameType === 'alligator' && this.assetsLoaded && this.wordSets && Object.keys(this.wordSets).length > 0) {
                 this.hostLogic.init(this.wordSets);
+                this.hostLogicInitialized = true;
+            } else if (this.currentGameType === 'telephone') {
+                this.hostLogic.init();
                 this.hostLogicInitialized = true;
             }
         },
@@ -666,6 +802,42 @@ createApp({
                 if (msg.type === "CHAT") {
                     this.hostLogic.handleChat(msg.payload.sender, msg.payload.text);
                     return;
+                }
+                // Telephone game handlers - check if hostLogic has telephone methods
+                const isTelephoneHost = this.hostLogic.handleDrawStroke !== undefined;
+                if (isTelephoneHost) {
+                    if (msg.type === "TEXT_SUBMISSION") {
+                        this.hostLogic.handleTextSubmission(msg.payload.sender, msg.payload.text);
+                        return;
+                    }
+                    if (msg.type === "GUESS_SUBMISSION") {
+                        this.hostLogic.handleGuessSubmission(msg.payload.sender, msg.payload.guess);
+                        return;
+                    }
+                    if (msg.type === "TELEPHONE_DRAW_STROKE") {
+                        this.hostLogic.handleDrawStroke(msg.payload.sender, msg.payload.stroke);
+                        return;
+                    }
+                    if (msg.type === "TELEPHONE_CLEAR") {
+                        this.hostLogic.handleClearCanvas(msg.payload.sender);
+                        return;
+                    }
+                    if (msg.type === "TELEPHONE_UNDO") {
+                        this.hostLogic.handleUndo(msg.payload.sender);
+                        return;
+                    }
+                    if (msg.type === "TELEPHONE_STROKE_SYNC") {
+                        this.hostLogic.syncStrokeHistory(msg.payload.sender, msg.payload.history);
+                        return;
+                    }
+                    if (msg.type === "REQUEST_ASSIGNMENT") {
+                        this.hostLogic.resendAssignmentToPlayer(msg.payload.sender);
+                        return;
+                    }
+                    if (msg.type === "NEXT_RESULT_STEP") {
+                        this.hostLogic.nextResultStep();
+                        return;
+                    }
                 }
                 if (msg.type === "DRAW_STROKE") {
                     // Host needs to draw on local canvas too (for reconnection scenarios)
@@ -772,6 +944,12 @@ createApp({
                         if (this.hostLogic.players[p.nickname]) {
                             this.hostLogic.players[p.nickname].connected = true;
                         }
+                        // For telephone game, resend their assignment after reconnection
+                        if (this.currentGameType === 'telephone' && this.hostLogic.resendAssignmentToPlayer) {
+                            setTimeout(() => {
+                                this.hostLogic.resendAssignmentToPlayer(p.nickname);
+                            }, 200);
+                        }
                     }
                     this.hostLogic.broadcastState();
                 }
@@ -794,9 +972,19 @@ createApp({
                 // Player reconnected during game - resend state to help them sync
                 const nickname = msg.payload.nickname;
                 if (nickname !== this.nickname && this.hostLogic) {
+                    // Update connected status
+                    if (this.hostLogic.players[nickname]) {
+                        this.hostLogic.players[nickname].connected = true;
+                    }
                     // Give them a moment to receive JOIN_SUCCESS, then send full state
                     setTimeout(() => {
                         this.hostLogic.broadcastState();
+                        // For telephone game, also resend their specific assignment
+                        if (this.currentGameType === 'telephone' && this.hostLogic.resendAssignmentToPlayer) {
+                            setTimeout(() => {
+                                this.hostLogic.resendAssignmentToPlayer(nickname);
+                            }, 100);
+                        }
                     }, 100);
                 }
             } else if (msg.type === "PLAYER_DISCONNECTED") {
@@ -828,8 +1016,14 @@ createApp({
                 }
 
             } else if (msg.type === "GAME_STATE_UPDATE") {
+                // Handle game type from payload
+                if (msg.payload.gameType) {
+                    this.currentGameType = msg.payload.gameType;
+                }
+                
                 this.gameState = msg.payload.game_state.phase === 'LOBBY' ? 'lobby' : 'playing';
-                this.gameStateData = msg.payload.game_state;
+                // Create a copy for Vue reactivity
+                this.gameStateData = { ...msg.payload.game_state };
 
                 if (msg.payload.players) {
                     this.players = msg.payload.players.map(p => ({
@@ -849,11 +1043,58 @@ createApp({
                     });
                 }
                 if (msg.payload.config) {
-                    this.gameConfig = { ...this.gameConfig, ...msg.payload.config };
+                    if (this.isTelephoneGame) {
+                        this.telephoneConfig = { ...this.telephoneConfig, ...msg.payload.config };
+                    } else {
+                        this.gameConfig = { ...this.gameConfig, ...msg.payload.config };
+                    }
                 }
 
                 // Canvas Init & Clears - Initialize canvas early if needed
                 this.$nextTick(() => {
+                    // Handle telephone game - SAME PATTERN AS ALLIGATOR
+                    if (this.isTelephoneGame) {
+                        // Restore current assignment from game state
+                        const assignments = msg.payload.game_state.currentAssignments;
+                        if (assignments && assignments[this.nickname]) {
+                            this.telephoneState.currentAssignment = assignments[this.nickname];
+                        }
+                        
+                        // Sync stroke history - SAME AS ALLIGATOR
+                        const strokeHistories = msg.payload.game_state.strokeHistories;
+                        const hasStrokeHistory = strokeHistories && strokeHistories[this.nickname] && strokeHistories[this.nickname].length > 0;
+                        
+                        if (hasStrokeHistory) {
+                            this.telephoneState.myStrokeHistory = strokeHistories[this.nickname];
+                        }
+                        
+                        // Initialize canvas and handle stroke history restoration - SAME AS ALLIGATOR
+                        if (!this.ctx) {
+                            this.initCanvas();
+                        }
+                        const phase = msg.payload.game_state.phase;
+                        this.$nextTick(() => {
+                            if (!this.ctx) return;
+                            
+                            if (phase === 'DRAWING') {
+                                if (hasStrokeHistory) {
+                                    this.redrawFromHistory(this.telephoneState.myStrokeHistory);
+                                } else {
+                                    // Clear stale canvas when reconnecting without saved strokes
+                                    this.ctx.clearRect(0, 0, this.$refs.gameCanvas.width, this.$refs.gameCanvas.height);
+                                }
+                            } else if (phase === 'GUESSING') {
+                                if (this.telephoneState.currentAssignment?.drawingToGuess) {
+                                    this.redrawFromHistory(this.telephoneState.currentAssignment.drawingToGuess);
+                                } else {
+                                    this.ctx.clearRect(0, 0, this.$refs.gameCanvas.width, this.$refs.gameCanvas.height);
+                                }
+                            }
+                        });
+                        return;
+                    }
+                    
+                    // Alligator game canvas handling
                     // Update stroke history from game state if available (do this first)
                     const hasStrokeHistory = msg.payload.game_state.stroke_history && Array.isArray(msg.payload.game_state.stroke_history) && msg.payload.game_state.stroke_history.length > 0;
                     
@@ -864,7 +1105,6 @@ createApp({
                     // Initialize canvas and handle stroke history restoration
                     if (!this.ctx) {
                         this.initCanvas();
-                        // initCanvas will automatically redraw from this.strokeHistory if it has content (line 1130-1132)
                     } else {
                         // Canvas already initialized, redraw if we have history
                         if (hasStrokeHistory) {
@@ -873,15 +1113,13 @@ createApp({
                     }
                     
                     // Clear canvas on phase transitions (new round starting)
-                    // Only clear if phase is DRAWER_PREPARING/PRE_ROUND AND stroke_history is empty (new round, not restoration)
-                    // NEVER clear during DRAWING phase - always preserve existing strokes
                     if ((msg.payload.game_state.phase === 'DRAWER_PREPARING' || msg.payload.game_state.phase === 'PRE_ROUND') 
                         && !hasStrokeHistory
                         && msg.payload.game_state.phase !== 'DRAWING') {
                         this.performClear();
                     }
                     
-                    // Sync button sizes when drawer role changes and toolbar becomes visible (DRAWER_PREPARING or DRAWING phase)
+                    // Sync button sizes when drawer role changes and toolbar becomes visible
                     if (msg.payload.game_state.drawer === this.nickname && 
                         (msg.payload.game_state.phase === 'DRAWER_PREPARING' || msg.payload.game_state.phase === 'DRAWING')) {
                         setTimeout(() => this.syncButtonSizes(), 200);
@@ -896,6 +1134,55 @@ createApp({
                 if (msg.target === this.nickname) {
                     if (msg.nested_type === "DRAWER_SECRET") {
                         this.gameStateData.word = msg.payload.word;
+                    }
+                    // Telephone game targeted messages
+                    if (msg.nested_type === "DRAW_ASSIGNMENT") {
+                        const current = this.telephoneState.currentAssignment;
+                        const isNewStep = !current || current.stepNumber !== msg.payload.stepNumber;
+                        const incomingHistory = msg.payload.strokeHistory || [];
+                        
+                        // Handle stroke history first (before updating assignment which triggers watcher)
+                        if (incomingHistory.length > 0) {
+                            // Reconnection case: restore from incoming history
+                            this.telephoneState.myStrokeHistory = [...incomingHistory];
+                        } else if (isNewStep) {
+                            // New round: clear stroke history
+                            this.telephoneState.myStrokeHistory = [];
+                        }
+                        
+                        // Update assignment - this will trigger the watcher to handle canvas
+                        this.telephoneState.currentAssignment = {
+                            chainId: msg.payload.chainId,
+                            textToDraw: msg.payload.textToDraw,
+                            stepNumber: msg.payload.stepNumber
+                        };
+                    }
+                    if (msg.nested_type === "GUESS_ASSIGNMENT") {
+                        // Clear stroke history for guessing phase
+                        this.telephoneState.myStrokeHistory = [];
+                        
+                        // Only clear guess if we don't already have one submitted
+                        if (!this.hasSubmittedTelephone) {
+                            this.telephoneState.guessInput = '';
+                        }
+                        
+                        // Update assignment - this will trigger the watcher to handle canvas
+                        this.telephoneState.currentAssignment = {
+                            chainId: msg.payload.chainId,
+                            drawingToGuess: msg.payload.drawingToGuess,
+                            stepNumber: msg.payload.stepNumber
+                        };
+                    }
+                    if (msg.nested_type === "STROKE_HISTORY_UPDATE") {
+                        this.telephoneState.myStrokeHistory = [...(msg.payload.history || [])];
+                        setTimeout(() => {
+                            if (!this.ctx) this.initCanvas();
+                            this.$nextTick(() => {
+                                if (this.ctx && this.telephoneState.myStrokeHistory.length > 0) {
+                                    this.redrawFromHistory(this.telephoneState.myStrokeHistory);
+                                }
+                            });
+                        }, 100);
                     }
                 }
             } else if (msg.type === "HOST_DISCONNECTED") {
@@ -946,7 +1233,11 @@ createApp({
                 this.redrawFromHistory(this.strokeHistory);
             }
             else if (msg.type === "CONFIG_UPDATE") {
-                this.gameConfig = msg.payload.config;
+                if (this.isTelephoneGame) {
+                    this.telephoneConfig = { ...this.telephoneConfig, ...msg.payload.config };
+                } else {
+                    this.gameConfig = msg.payload.config;
+                }
             }
             else if (msg.type === "LEFT_ROOM") {
                 // Confirmation that we successfully left the room
@@ -975,14 +1266,34 @@ createApp({
         },
 
         // HOST ACTIONS
+        setGameType(type) {
+            if (this.gameState !== 'lobby') return;
+            if (!this.amIHost) return;
+            
+            this.currentGameType = type;
+            // Reinitialize host logic with new game type
+            this.initHostLogic();
+            if (type === 'alligator' && this.assetsLoaded) {
+                this.hostLogic.init(this.wordSets);
+                this.hostLogicInitialized = true;
+            } else {
+                this.hostLogic.init();
+                this.hostLogicInitialized = true;
+            }
+            // Broadcast game type change to all players
+            this.hostLogic.broadcastState();
+        },
         startGame() {
             if (!this.hostLogic) {
                 this.showNotification(this.t('gameLogicNotInit'), "error");
                 return;
             }
-            if (!this.assetsLoaded || !this.wordSets || Object.keys(this.wordSets).length === 0) {
-                this.showNotification(this.t('wordSetsLoading'), "error");
-                return;
+            // Only check assets for alligator game
+            if (this.currentGameType === 'alligator') {
+                if (!this.assetsLoaded || !this.wordSets || Object.keys(this.wordSets).length === 0) {
+                    this.showNotification(this.t('wordSetsLoading'), "error");
+                    return;
+                }
             }
             if (!this.hostLogicInitialized) {
                 // Initialize hostLogic with wordSets if not already done
@@ -1051,6 +1362,147 @@ createApp({
             this.updateConfig();
         },
 
+        // TELEPHONE ACTIONS
+        submitTelephoneText() {
+            if (!this.telephoneState.textInput.trim()) return;
+            if (this.socket) {
+                this.socket.send(JSON.stringify({
+                    type: "TEXT_SUBMISSION",
+                    payload: { sender: this.nickname, text: this.telephoneState.textInput }
+                }));
+            }
+            if (this.amIHost && this.hostLogic) {
+                this.hostLogic.handleTextSubmission(this.nickname, this.telephoneState.textInput);
+            }
+            this.telephoneState.textInput = '';
+        },
+        submitTelephoneGuess() {
+            if (!this.telephoneState.guessInput.trim()) return;
+            if (this.socket) {
+                this.socket.send(JSON.stringify({
+                    type: "GUESS_SUBMISSION",
+                    payload: { sender: this.nickname, guess: this.telephoneState.guessInput }
+                }));
+            }
+            if (this.amIHost && this.hostLogic) {
+                this.hostLogic.handleGuessSubmission(this.nickname, this.telephoneState.guessInput);
+            }
+            this.telephoneState.guessInput = '';
+        },
+        telephoneDrawStroke(payload) {
+            if (this.socket) {
+                this.socket.send(JSON.stringify({
+                    type: "TELEPHONE_DRAW_STROKE",
+                    payload: { sender: this.nickname, stroke: payload }
+                }));
+            }
+            if (this.amIHost && this.hostLogic) {
+                this.hostLogic.handleDrawStroke(this.nickname, payload);
+            }
+            this.telephoneState.myStrokeHistory.push(payload);
+        },
+        telephoneClear() {
+            if (this.socket) {
+                this.socket.send(JSON.stringify({
+                    type: "TELEPHONE_CLEAR",
+                    payload: { sender: this.nickname }
+                }));
+            }
+            if (this.amIHost && this.hostLogic) {
+                this.hostLogic.handleClearCanvas(this.nickname);
+            }
+            this.telephoneState.myStrokeHistory = [];
+            this.performClear();
+        },
+        telephoneUndo() {
+            if (this.socket) {
+                this.socket.send(JSON.stringify({
+                    type: "TELEPHONE_UNDO",
+                    payload: { sender: this.nickname }
+                }));
+            }
+            if (this.amIHost && this.hostLogic) {
+                this.hostLogic.handleUndo(this.nickname);
+                this.telephoneState.myStrokeHistory = this.hostLogic.state.strokeHistories?.[this.nickname] || [];
+                this.redrawFromHistory(this.telephoneState.myStrokeHistory);
+            }
+        },
+        nextTelephoneResult() {
+            if (this.amIHost && this.hostLogic) {
+                this.hostLogic.nextResultStep();
+            } else if (this.socket) {
+                this.socket.send(JSON.stringify({
+                    type: "NEXT_RESULT_STEP",
+                    payload: {}
+                }));
+            }
+        },
+        // Local results navigation (for viewing chains)
+        nextChainStep() {
+            const chain = this.currentChain;
+            if (!chain) return;
+            
+            if (this.telephoneResultsView.currentStepIndex < chain.steps.length - 1) {
+                this.telephoneResultsView.currentStepIndex++;
+                this.$nextTick(() => this.renderChainDrawings());
+            }
+        },
+        prevChainStep() {
+            if (this.telephoneResultsView.currentStepIndex > 0) {
+                this.telephoneResultsView.currentStepIndex--;
+            }
+        },
+        nextChain() {
+            if (this.telephoneResultsView.currentChainIndex < this.chainKeys.length - 1) {
+                this.telephoneResultsView.currentChainIndex++;
+                this.telephoneResultsView.currentStepIndex = 0;
+            }
+            this.$nextTick(() => this.renderChainDrawings());
+        },
+        prevChain() {
+            if (this.telephoneResultsView.currentChainIndex > 0) {
+                this.telephoneResultsView.currentChainIndex--;
+                this.telephoneResultsView.currentStepIndex = 0;
+            }
+            this.$nextTick(() => this.renderChainDrawings());
+        },
+        renderChainDrawings() {
+            if (!this.currentChain) return;
+            this.currentChain.steps.forEach((step, idx) => {
+                if (step.type === 'drawing') {
+                    const canvasRef = this.$refs['chainCanvas_' + idx];
+                    if (canvasRef && canvasRef[0]) {
+                        const canvas = canvasRef[0];
+                        canvas.width = 2000;
+                        canvas.height = 1500;
+                        const ctx = canvas.getContext('2d');
+                        ctx.lineCap = 'round';
+                        ctx.lineJoin = 'round';
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        
+                        if (Array.isArray(step.content)) {
+                            step.content.forEach(s => {
+                                ctx.beginPath();
+                                ctx.moveTo(s.x1 * canvas.width, s.y1 * canvas.height);
+                                ctx.lineTo(s.x2 * canvas.width, s.y2 * canvas.height);
+                                if (s.isEraser || s.color === '#FFFFFF') {
+                                    ctx.strokeStyle = '#FFFFFF';
+                                    ctx.lineWidth = 45;
+                                } else {
+                                    ctx.strokeStyle = s.color;
+                                    ctx.lineWidth = 15;
+                                }
+                                ctx.stroke();
+                            });
+                        }
+                    }
+                }
+            });
+        },
+        updateTelephoneConfig() {
+            if (this.hostLogic) this.hostLogic.setConfig(this.telephoneConfig);
+        },
+
         // CLIENT ACTIONS
         sendChat() {
             if (!this.chatInput.trim() || !this.socket) return;
@@ -1093,7 +1545,18 @@ createApp({
         },
         handleResize() {
             this.checkMobile();
-            if (this.ctx) this.redrawFromHistory(this.strokeHistory);
+            // Redraw appropriate history for game type
+            if (this.ctx) {
+                if (this.isTelephoneGame) {
+                    if (this.gameStateData.phase === 'DRAWING') {
+                        this.redrawFromHistory(this.telephoneState.myStrokeHistory);
+                    } else if (this.gameStateData.phase === 'GUESSING' && this.telephoneState.currentAssignment?.drawingToGuess) {
+                        this.redrawFromHistory(this.telephoneState.currentAssignment.drawingToGuess);
+                    }
+                } else {
+                    this.redrawFromHistory(this.strokeHistory);
+                }
+            }
             this.syncButtonSizes();
             // Check if results list scroll state changed
             if (this.gameStateData.phase === 'DRAWER_PREPARING') {
@@ -1235,15 +1698,30 @@ createApp({
         cleanupRoom() {
             this.socket = null;
             this.isHostDisconnected = false;
-            this.hostLogic = null; // Fix ghost player state leakage
+            this.hostLogic = null;
+            this.hostLogicInitialized = false;
             this.showLeaveModal = false;
             this.showPlayerLeaveModal = false;
             this.showInviteModal = false;
             this.isEditingNickname = false;
-            this.gameState = 'lobby'; // Reset game phase to fix re-creation bug
+            this.gameState = 'lobby';
+            this.currentGameType = 'alligator';
             this.view = this.nickname ? 'lobby' : 'login';
             this.messages = [];
             this.players = [];
+            
+            // Reset telephone state
+            this.telephoneState = {
+                textInput: '',
+                guessInput: '',
+                currentAssignment: null,
+                myStrokeHistory: []
+            };
+            this.telephoneResultsView = {
+                currentChainIndex: 0,
+                currentStepIndex: 0,
+                autoPlay: false
+            };
 
             // Reset game state to close modals
             this.gameStateData = {
@@ -1261,6 +1739,7 @@ createApp({
             // Clear persistence
             if (this.roomCode) {
                 localStorage.removeItem(`host_state_${this.roomCode}`);
+                localStorage.removeItem(`telephone_state_${this.roomCode}`);
             }
             localStorage.removeItem('roomCode');
             localStorage.removeItem('roomToken');
@@ -1295,7 +1774,11 @@ createApp({
             canvas.addEventListener('mouseout', this.stopDrawing);
 
             canvas.addEventListener('touchstart', (e) => {
-                if (!this.amIDrawing) return;
+                // Check if drawing is allowed for current game type
+                const canDraw = this.isTelephoneGame 
+                    ? this.gameStateData.phase === 'DRAWING'
+                    : this.amIDrawing;
+                if (!canDraw) return;
                 e.preventDefault();
                 const touch = e.touches[0];
                 const mouseEvent = new MouseEvent('mousedown', {
@@ -1305,7 +1788,10 @@ createApp({
                 canvas.dispatchEvent(mouseEvent);
             }, { passive: false });
             canvas.addEventListener('touchmove', (e) => {
-                if (!this.amIDrawing) return;
+                const canDraw = this.isTelephoneGame 
+                    ? this.gameStateData.phase === 'DRAWING'
+                    : this.amIDrawing;
+                if (!canDraw) return;
                 e.preventDefault();
                 const touch = e.touches[0];
                 const mouseEvent = new MouseEvent('mousemove', {
@@ -1315,24 +1801,54 @@ createApp({
                 canvas.dispatchEvent(mouseEvent);
             }, { passive: false });
             canvas.addEventListener('touchend', () => {
-                if (!this.amIDrawing) return;
+                const canDraw = this.isTelephoneGame 
+                    ? this.gameStateData.phase === 'DRAWING'
+                    : this.amIDrawing;
+                if (!canDraw) return;
                 const mouseEvent = new MouseEvent('mouseup', {});
                 canvas.dispatchEvent(mouseEvent);
             });
 
             // Redraw if we already have history (e.g. from a sync message that arrived before init)
-            if (this.strokeHistory.length > 0) {
+            if (this.isTelephoneGame) {
+                // For telephone game, redraw based on phase
+                if (this.gameStateData.phase === 'DRAWING' && this.telephoneState.myStrokeHistory.length > 0) {
+                    this.redrawFromHistory(this.telephoneState.myStrokeHistory);
+                } else if (this.gameStateData.phase === 'GUESSING' && this.telephoneState.currentAssignment?.drawingToGuess) {
+                    this.redrawFromHistory(this.telephoneState.currentAssignment.drawingToGuess);
+                }
+            } else if (this.strokeHistory.length > 0) {
                 this.redrawFromHistory(this.strokeHistory);
             }
         },
         startDrawing(e) {
-            if (!this.amIDrawing) return;
+            // For telephone game, allow drawing if in drawing phase
+            if (this.isTelephoneGame) {
+                if (this.gameStateData.phase !== 'DRAWING') return;
+            } else {
+                if (!this.amIDrawing) return;
+            }
             this.isDrawing = true;
             this.currentActionId = Math.random().toString(36).substr(2, 9);
             const pos = this.getPos(e);
             this.lastX = pos.x; this.lastY = pos.y;
         },
         draw(e) {
+            // For telephone game, check if we're in drawing phase
+            if (this.isTelephoneGame) {
+                if (!this.isDrawing || this.gameStateData.phase !== 'DRAWING') return;
+                const pos = this.getPos(e);
+                const strokeColor = this.isEraser ? '#FFFFFF' : this.currentBrushColor;
+                const payload = { x1: this.lastX, y1: this.lastY, x2: pos.x, y2: pos.y, color: strokeColor, actionId: this.currentActionId, isEraser: this.isEraser };
+                
+                this.drawStroke(payload.x1, payload.y1, payload.x2, payload.y2, payload.color, false, payload.isEraser, payload.actionId);
+                this.telephoneDrawStroke(payload);
+                
+                this.lastX = pos.x;
+                this.lastY = pos.y;
+                return;
+            }
+            
             if (!this.isDrawing || !this.amIDrawing) return;
             const pos = this.getPos(e);
 
@@ -1358,7 +1874,86 @@ createApp({
             this.lastX = pos.x;
             this.lastY = pos.y;
         },
-        stopDrawing() { this.isDrawing = false; },
+        stopDrawing() { 
+            this.isDrawing = false; 
+            // For telephone game, send full stroke history on mouseup to ensure host has latest state
+            if (this.isTelephoneGame && this.gameStateData.phase === 'DRAWING' && this.telephoneState.myStrokeHistory.length > 0) {
+                this.sendTelephoneStrokeHistorySync();
+            }
+        },
+        sendTelephoneStrokeHistorySync() {
+            // Send full stroke history to host for synchronization
+            if (this.socket) {
+                this.socket.send(JSON.stringify({
+                    type: "TELEPHONE_STROKE_SYNC",
+                    payload: { sender: this.nickname, history: this.telephoneState.myStrokeHistory }
+                }));
+            }
+            if (this.amIHost && this.hostLogic) {
+                // Host syncs directly
+                this.hostLogic.syncStrokeHistory(this.nickname, this.telephoneState.myStrokeHistory);
+            }
+        },
+        // Handle telephone assignment changes reactively (called by watcher)
+        handleTelephoneAssignmentChange(newAssignment, oldAssignment) {
+            if (!newAssignment) return;
+            
+            const phase = this.gameStateData.phase;
+            const isNewStep = !oldAssignment || oldAssignment.stepNumber !== newAssignment.stepNumber;
+            
+            // Initialize canvas if needed
+            if (!this.ctx) {
+                this.initCanvas();
+            }
+            
+            this.$nextTick(() => {
+                if (!this.ctx) return;
+                
+                if (phase === 'DRAWING') {
+                    // Clear canvas for new drawing round
+                    this.ctx.clearRect(0, 0, this.$refs.gameCanvas.width, this.$refs.gameCanvas.height);
+                    
+                    // If we have stroke history, redraw it
+                    if (this.telephoneState.myStrokeHistory.length > 0) {
+                        this.redrawFromHistory(this.telephoneState.myStrokeHistory);
+                    }
+                } else if (phase === 'GUESSING' && newAssignment.drawingToGuess) {
+                    // Clear and draw the image to guess
+                    this.ctx.clearRect(0, 0, this.$refs.gameCanvas.width, this.$refs.gameCanvas.height);
+                    this.redrawFromHistory(newAssignment.drawingToGuess);
+                }
+            });
+        },
+        // Ensure we have the correct assignment for current phase
+        ensureTelephoneAssignment() {
+            const phase = this.gameStateData.phase;
+            const assignment = this.telephoneState.currentAssignment;
+            
+            // Check if we need to request assignment
+            const needsAssignment = (phase === 'DRAWING' && (!assignment || !assignment.textToDraw)) ||
+                                   (phase === 'GUESSING' && (!assignment || !assignment.drawingToGuess));
+            
+            if (needsAssignment) {
+                // Request assignment from host
+                this.requestTelephoneAssignment();
+            } else {
+                // We have the assignment, ensure canvas is updated
+                this.handleTelephoneAssignmentChange(assignment, null);
+            }
+        },
+        // Request current assignment from host
+        requestTelephoneAssignment() {
+            if (this.socket) {
+                this.socket.send(JSON.stringify({
+                    type: "REQUEST_ASSIGNMENT",
+                    payload: { sender: this.nickname }
+                }));
+            }
+            // If we're the host, handle directly
+            if (this.amIHost && this.hostLogic && this.hostLogic.resendAssignmentToPlayer) {
+                this.hostLogic.resendAssignmentToPlayer(this.nickname);
+            }
+        },
         drawStroke(x1, y1, x2, y2, color, fromHistory = false, isEraserStroke = false, actionId = null) {
             // Ensure canvas is initialized if not already done
             if (!this.ctx && this.$refs.gameCanvas) {

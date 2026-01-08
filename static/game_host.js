@@ -507,7 +507,8 @@ class GameHost {
             game_state: publicState,
             scores: this.getScores(),
             players: this.getPlayersList(),
-            config: this.config
+            config: this.config,
+            gameType: 'alligator'
         });
 
         this.saveState();

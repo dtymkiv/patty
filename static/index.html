@@ -241,6 +241,7 @@
         }
     </style>
     <script src="/static/game_host.js"></script>
+    <script src="/static/game_telephone.js"></script>
     <script src="/static/i18n.js"></script>
 </head>
 
@@ -454,6 +455,27 @@
                                 {{ t('settings') }}</h3>
 
                             <div class="space-y-8">
+                                <!-- Game Type Selection -->
+                                <div>
+                                    <label class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-3">{{ t('selectGame') }}</label>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <button @click="setGameType('alligator')" :disabled="!amIHost"
+                                            :class="currentGameType === 'alligator' ? 'ring-4 ring-[#ea5128] bg-white dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'"
+                                            class="p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-600 transition-all hover:border-[#ea5128]/50 text-center">
+                                            <div class="text-4xl mb-2">🐊</div>
+                                            <div class="font-black text-gray-900 dark:text-white">{{ t('alligator') }}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('alligatorDesc') }}</div>
+                                        </button>
+                                        <button @click="setGameType('telephone')" :disabled="!amIHost"
+                                            :class="currentGameType === 'telephone' ? 'ring-4 ring-[#ea5128] bg-white dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'"
+                                            class="p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-600 transition-all hover:border-[#ea5128]/50 text-center">
+                                            <div class="text-4xl mb-2">📞</div>
+                                            <div class="font-black text-gray-900 dark:text-white">{{ t('telephone') }}</div>
+                                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('telephoneDesc') }}</div>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <!-- Host Role -->
                                 <div>
                                     <label
@@ -472,68 +494,71 @@
                                     </div>
                                 </div>
 
-                                <!-- Round Duration -->
-                                <div>
-                                    <div class="flex justify-between mb-2">
+                                <!-- Alligator Game Settings -->
+                                <template v-if="currentGameType === 'alligator'">
+                                    <!-- Round Duration -->
+                                    <div>
+                                        <div class="flex justify-between mb-2">
+                                            <label
+                                                class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('roundDuration') }}</label>
+                                            <span class="text-[#ea5128] font-black">{{ gameConfig.round_duration
+                                                }}s</span>
+                                        </div>
+                                        <input type="range" min="30" max="180" step="10"
+                                            v-model.number="gameConfig.round_duration" @input="updateConfig"
+                                            :disabled="!amIHost"
+                                            class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
+                                    </div>
+
+                                    <!-- Points to Win -->
+                                    <div>
+                                        <div class="flex justify-between mb-2">
+                                            <label
+                                                class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('pointsToWin') }}</label>
+                                            <span class="text-[#ea5128] font-black">{{ gameConfig.points_to_win
+                                                }}</span>
+                                        </div>
+                                        <input type="range" min="5" max="250" step="5"
+                                            v-model.number="gameConfig.points_to_win" @input="updateConfig"
+                                            :disabled="!amIHost"
+                                            class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
+                                    </div>
+
+                                    <!-- Base Points -->
+                                    <div>
+                                        <div class="flex justify-between mb-2">
+                                            <label
+                                                class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('basePoints') }}</label>
+                                            <span class="text-[#ea5128] font-black">{{ gameConfig.base_points || 10
+                                                }}</span>
+                                        </div>
+                                        <input type="range" min="1" :max="gameConfig.points_to_win" step="1"
+                                            v-model.number="gameConfig.base_points" @input="updateConfig"
+                                            :disabled="!amIHost"
+                                            class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
+                                    </div>
+
+                                    <!-- Turn Order -->
+                                    <div>
                                         <label
-                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('roundDuration') }}</label>
-                                        <span class="text-[#ea5128] font-black">{{ gameConfig.round_duration
-                                            }}s</span>
+                                            class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-2">{{ t('turnOrder') }}</label>
+                                        <div class="flex gap-4">
+                                            <button @click="setTurnOrder('sequence')" :disabled="!amIHost"
+                                                :class="gameConfig.turn_order === 'sequence' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
+                                                class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
+                                                {{ t('sequential') }}
+                                            </button>
+                                            <button @click="setTurnOrder('winner')" :disabled="!amIHost"
+                                                :class="gameConfig.turn_order === 'winner' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
+                                                class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
+                                                {{ t('winnerFirst') }}
+                                            </button>
+                                        </div>
                                     </div>
-                                    <input type="range" min="30" max="180" step="10"
-                                        v-model.number="gameConfig.round_duration" @input="updateConfig"
-                                        :disabled="!amIHost"
-                                        class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
-                                </div>
+                                </template>
 
-                                <!-- Points to Win -->
-                                <div>
-                                    <div class="flex justify-between mb-2">
-                                        <label
-                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('pointsToWin') }}</label>
-                                        <span class="text-[#ea5128] font-black">{{ gameConfig.points_to_win
-                                            }}</span>
-                                    </div>
-                                    <input type="range" min="5" max="250" step="5"
-                                        v-model.number="gameConfig.points_to_win" @input="updateConfig"
-                                        :disabled="!amIHost"
-                                        class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
-                                </div>
-
-                                <!-- Base Points -->
-                                <div>
-                                    <div class="flex justify-between mb-2">
-                                        <label
-                                            class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('basePoints') }}</label>
-                                        <span class="text-[#ea5128] font-black">{{ gameConfig.base_points || 10
-                                            }}</span>
-                                    </div>
-                                    <input type="range" min="1" :max="gameConfig.points_to_win" step="1"
-                                        v-model.number="gameConfig.base_points" @input="updateConfig"
-                                        :disabled="!amIHost"
-                                        class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
-                                </div>
-
-                                <!-- Turn Order -->
-                                <div>
-                                    <label
-                                        class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-2">{{ t('turnOrder') }}</label>
-                                    <div class="flex gap-4">
-                                        <button @click="setTurnOrder('sequence')" :disabled="!amIHost"
-                                            :class="gameConfig.turn_order === 'sequence' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
-                                            class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
-                                            {{ t('sequential') }}
-                                        </button>
-                                        <button @click="setTurnOrder('winner')" :disabled="!amIHost"
-                                            :class="gameConfig.turn_order === 'winner' ? 'bg-[#ea5128] text-white shadow-[#ea512833]' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border border-transparent'"
-                                            class="flex-1 py-3 rounded-xl transition-all border border-transparent shadow-lg active:scale-95 font-bold">
-                                            {{ t('winnerFirst') }}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Word Language & Difficulty -->
-                                <div class="grid grid-cols-2 gap-4">
+                                <!-- Word Language & Difficulty (Alligator only) -->
+                                <div v-if="currentGameType === 'alligator'" class="grid grid-cols-2 gap-4">
                                     <div>
                                         <label
                                             class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-1.5">{{ t('language') }}</label>
@@ -557,11 +582,211 @@
                                     </div>
                                 </div>
 
+                                <!-- Telephone Settings -->
+                                <template v-if="currentGameType === 'telephone'">
+                                    <div>
+                                        <div class="flex justify-between mb-2">
+                                            <label class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('drawDuration') }}</label>
+                                            <span class="text-[#ea5128] font-black">{{ telephoneConfig.draw_duration }}s</span>
+                                        </div>
+                                        <input type="range" min="30" max="180" step="10" v-model.number="telephoneConfig.draw_duration" @input="updateTelephoneConfig" :disabled="!amIHost"
+                                            class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-2">
+                                            <label class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('guessDuration') }}</label>
+                                            <span class="text-[#ea5128] font-black">{{ telephoneConfig.guess_duration }}s</span>
+                                        </div>
+                                        <input type="range" min="20" max="90" step="5" v-model.number="telephoneConfig.guess_duration" @input="updateTelephoneConfig" :disabled="!amIHost"
+                                            class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
+                                    </div>
+                                    <div>
+                                        <div class="flex justify-between mb-2">
+                                            <label class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('maxRounds') }}</label>
+                                            <span class="text-[#ea5128] font-black">{{ telephoneConfig.max_rounds === 0 ? t('auto') : telephoneConfig.max_rounds }}</span>
+                                        </div>
+                                        <input type="range" min="0" :max="Math.max(players.length, 6)" step="1" v-model.number="telephoneConfig.max_rounds" @input="updateTelephoneConfig" :disabled="!amIHost"
+                                            class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
+                                    </div>
+                                </template>
+
                             </div>
 
                             <p v-if="!amIHost" class="mt-8 text-center text-gray-500 text-sm italic">{{ t('onlyHostSettings') }}</p>
+                            <p v-if="currentGameType === 'telephone' && players.filter(p => p.connected).length < 3" class="mt-4 text-center text-orange-500 text-sm font-bold">
+                                ⚠️ {{ t('needMorePlayers') }}
+                            </p>
                         </div>
 
+                        <!-- Telephone Game UI -->
+                        <div v-else-if="isTelephoneGame" class="game-area-inner w-full h-full flex flex-col relative text-gray-900 dark:text-white">
+                            <!-- Telephone Header -->
+                            <div class="game-info-header flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50 rounded-t-2xl shrink-0">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-2xl">📞</span>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-black text-gray-900 dark:text-white uppercase tracking-wider text-sm">
+                                            {{ telephonePhase === 'TEXT_INPUT' ? t('enterPhrase') : telephonePhase === 'GUESSING' ? t('guessDrawing') : telephonePhase === 'RESULTS' || telephonePhase === 'GAME_OVER' ? t('chainResults') : '' }}
+                                        </div>
+                                        <div v-if="telephonePhase === 'DRAWING'" class="font-black text-blue-600 dark:text-blue-400 text-lg truncate" :title="telephoneState.currentAssignment?.textToDraw">
+                                            🎨 {{ telephoneState.currentAssignment?.textToDraw }}
+                                        </div>
+                                        <div class="text-xs text-gray-500">
+                                            {{ t('submittedCount') }}: {{ submittedPlayersCount }}/{{ activePlayersCount }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-2xl font-black font-mono" :class="timeLeft < 10 ? 'text-red-500' : 'text-gray-900 dark:text-white'">
+                                    {{ timeLeft }}s
+                                </div>
+                            </div>
+
+                            <!-- TEXT_INPUT Phase -->
+                            <div v-if="telephonePhase === 'TEXT_INPUT'" class="flex-1 flex flex-col items-center justify-center p-8 bg-white dark:bg-gray-900">
+                                <template v-if="!hasSubmittedTelephone">
+                                    <div class="w-full max-w-md">
+                                        <input v-model="telephoneState.textInput" @keyup.enter="submitTelephoneText" type="text" 
+                                            :placeholder="t('phrasePlaceholder')" maxlength="100"
+                                            class="w-full p-4 text-xl text-center rounded-2xl bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 focus:border-[#ea5128] focus:outline-none transition-all">
+                                        <button @click="submitTelephoneText" :disabled="!telephoneState.textInput.trim()"
+                                            class="w-full mt-4 py-4 bg-[#ea5128] hover:bg-[#c1381b] text-white font-black rounded-xl transition-all disabled:opacity-50">
+                                            {{ t('submitPhrase') }}
+                                        </button>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div class="text-center">
+                                        <div class="text-6xl mb-4">✓</div>
+                                        <div class="text-xl font-bold text-gray-600 dark:text-gray-400">{{ t('waitingForPlayers') }}</div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <!-- DRAWING Phase -->
+                            <div v-else-if="telephonePhase === 'DRAWING'" class="flex-1 flex flex-col">
+                                <div class="canvas-side-container flex-1 relative bg-white rounded-b-xl shadow-inner overflow-hidden min-h-0 flex items-center justify-center p-2">
+                                    <canvas ref="gameCanvas" class="w-full max-h-full block cursor-crosshair h-auto touch-none" style="aspect-ratio: 4/3;"></canvas>
+                                </div>
+                                <div class="bg-white dark:bg-gray-800 p-3 border-t border-gray-100 dark:border-gray-700">
+                                    <div class="drawing-toolbar-inner flex items-center justify-between gap-2 max-w-full">
+                                        <div class="color-palette-grid flex flex-nowrap gap-1 justify-center flex-1 min-w-0 items-center">
+                                            <template v-for="c in drawColors" :key="c">
+                                                <button @click="setBrushColor(c)" :style="{backgroundColor: c}"
+                                                    class="color-btn rounded-xl border-2 border-white dark:border-gray-900 hover:scale-110 transition-all shadow-lg active:scale-90 aspect-square flex-shrink"
+                                                    :class="{'ring-4 ring-[#ea5128]': currentBrushColor === c && !isEraser}"></button>
+                                            </template>
+                                            <button @click="toggleEraser"
+                                                class="color-btn flex items-center justify-center bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-xl text-gray-700 dark:text-gray-300 transition-all active:scale-90 shadow-lg flex-shrink aspect-square"
+                                                :class="{'ring-4 ring-[#ea5128] bg-gray-200 dark:bg-gray-600': isEraser}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full p-1.5" fill="currentColor" viewBox="0 0 16 16">
+                                                    <path d="M8.086 2.207a2 2 0 0 1 2.828 0l3.879 3.879a2 2 0 0 1 0 2.828l-5.5 5.5A2 2 0 0 1 7.879 15H5.12a2 2 0 0 1-1.414-.586l-2.5-2.5a2 2 0 0 1 0-2.828zm2.121.707a1 1 0 0 0-1.414 0L4.16 7.547l5.293 5.293 4.633-4.633a1 1 0 0 0 0-1.414zM8.746 13.547 3.453 8.254 1.914 9.793a1 1 0 0 0 0 1.414l2.5 2.5a1 1 0 0 0 .707.293H7.88a1 1 0 0 0 .707-.293z"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        <div class="drawing-actions-group flex items-center gap-1.5 pl-2 border-l border-gray-100 dark:border-gray-700 shrink-0">
+                                            <button @click="telephoneUndo" class="color-btn action-btn flex items-center justify-center bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-all active:scale-90 shadow-lg aspect-square">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full p-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                                </svg>
+                                            </button>
+                                            <button @click="telephoneClear" class="color-btn action-btn flex items-center justify-center bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-all active:scale-90 shadow-lg aspect-square">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="w-full h-full p-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- GUESSING Phase -->
+                            <div v-else-if="telephonePhase === 'GUESSING'" class="flex-1 flex flex-col">
+                                <div class="canvas-side-container flex-1 relative bg-white rounded-xl shadow-inner overflow-hidden min-h-0 flex items-center justify-center p-2">
+                                    <canvas ref="gameCanvas" class="w-full max-h-full block h-auto" style="aspect-ratio: 4/3;"></canvas>
+                                </div>
+                                <div class="p-4 bg-white dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700">
+                                    <template v-if="!hasSubmittedTelephone">
+                                        <div class="flex gap-2">
+                                            <input v-model="telephoneState.guessInput" @keyup.enter="submitTelephoneGuess" type="text"
+                                                :placeholder="t('guessPlaceholder')" maxlength="100"
+                                                class="flex-1 p-3 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 focus:border-[#ea5128] focus:outline-none">
+                                            <button @click="submitTelephoneGuess" :disabled="!telephoneState.guessInput.trim()"
+                                                class="px-6 py-3 bg-[#ea5128] hover:bg-[#c1381b] text-white font-black rounded-xl transition-all disabled:opacity-50">
+                                                {{ t('submitGuess') }}
+                                            </button>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <div class="text-center py-2 text-gray-500">{{ t('waitingForPlayers') }}</div>
+                                    </template>
+                                </div>
+                            </div>
+
+                            <!-- RESULTS Phase -->
+                            <div v-else-if="telephonePhase === 'RESULTS' || telephonePhase === 'GAME_OVER'" class="flex-1 flex flex-col bg-gray-50 dark:bg-gray-900 overflow-y-auto">
+                                <div class="p-4">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <button @click="prevChain" :disabled="telephoneResultsView.currentChainIndex === 0"
+                                            class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 disabled:opacity-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                                            </svg>
+                                        </button>
+                                        <div class="text-center">
+                                            <div class="text-sm text-gray-500 uppercase tracking-widest">{{ t('chainResults') }}</div>
+                                            <div class="font-black text-lg" :style="{color: getPlayerColor(currentChainAuthor)}">
+                                                {{ currentChainAuthor }}'s Chain
+                                            </div>
+                                            <div class="text-xs text-gray-400">{{ telephoneResultsView.currentChainIndex + 1 }} / {{ chainKeys.length }}</div>
+                                        </div>
+                                        <button @click="nextChain" :disabled="telephoneResultsView.currentChainIndex >= chainKeys.length - 1"
+                                            class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 disabled:opacity-50">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                                            </svg>
+                                        </button>
+                                    </div>
+
+                                    <!-- Chain Steps -->
+                                    <div v-if="currentChain" class="space-y-4">
+                                        <div v-for="(step, idx) in currentChain.steps" :key="idx"
+                                            class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border-2 transition-all"
+                                            :class="idx <= telephoneResultsView.currentStepIndex ? 'border-[#ea5128]/30' : 'border-transparent opacity-50'">
+                                            <div class="flex items-center gap-2 mb-2">
+                                                <div class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold"
+                                                    :style="{backgroundColor: getPlayerColor(step.author)}">
+                                                    {{ step.author[0] }}
+                                                </div>
+                                                <span class="font-bold" :style="{color: getPlayerColor(step.author)}">{{ step.author }}</span>
+                                                <span class="text-gray-400 text-sm">
+                                                    {{ idx === 0 ? t('originalPhrase') : step.type === 'drawing' ? t('drewAs') : t('guessedAs') }}
+                                                </span>
+                                            </div>
+                                            <div v-if="step.type === 'text'" class="text-xl font-black text-center py-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                                                "{{ step.content }}"
+                                            </div>
+                                            <div v-else class="relative">
+                                                <canvas :ref="'chainCanvas_' + idx" class="w-full bg-white rounded-xl" style="aspect-ratio: 4/3;"></canvas>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Navigation -->
+                                    <div class="flex justify-center gap-4 mt-6">
+                                        <button @click="prevChainStep" :disabled="telephoneResultsView.currentStepIndex === 0"
+                                            class="px-6 py-3 bg-gray-200 dark:bg-gray-700 rounded-xl font-bold disabled:opacity-50 transition-all">
+                                            ← Previous
+                                        </button>
+                                        <button @click="nextChainStep" :disabled="!currentChain || telephoneResultsView.currentStepIndex >= currentChain.steps.length - 1"
+                                            class="px-6 py-3 bg-[#ea5128] text-white rounded-xl font-bold disabled:opacity-50 transition-all">
+                                            Next →
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Alligator (Original) Game UI -->
                         <div v-else
                             class="game-area-inner w-full h-full flex flex-col relative text-gray-900 dark:text-white">
                             <!-- Condensed Game Header -->
@@ -797,8 +1022,77 @@
             </div>
         </div>
 
-        <!-- Overlay: Game Over (🏆 Trophy Overlay) -->
-        <div v-if="gameStateData.phase === 'GAME_OVER'"
+        <!-- Overlay: Telephone Game Over -->
+        <div v-if="isTelephoneGame && (gameStateData.phase === 'RESULTS' || gameStateData.phase === 'GAME_OVER')"
+            class="fixed inset-0 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-[60] p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <!-- Header -->
+                <div class="p-6 border-b border-gray-100 dark:border-gray-700 text-center">
+                    <h2 class="text-4xl font-black text-[#ea5128] uppercase tracking-tight mb-2">📞 {{ t('chainResults') }}</h2>
+                    <div class="flex items-center justify-center gap-4">
+                        <button @click="prevChain" :disabled="telephoneResultsView.currentChainIndex === 0"
+                            class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 disabled:opacity-30 transition-all hover:bg-gray-300 dark:hover:bg-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                            </svg>
+                        </button>
+                        <div class="text-center">
+                            <div class="font-black text-xl" :style="{color: getPlayerColor(currentChainAuthor)}">
+                                {{ currentChainAuthor }}'s Chain
+                            </div>
+                            <div class="text-xs text-gray-400">{{ telephoneResultsView.currentChainIndex + 1 }} / {{ chainKeys.length }}</div>
+                        </div>
+                        <button @click="nextChain" :disabled="telephoneResultsView.currentChainIndex >= chainKeys.length - 1"
+                            class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 disabled:opacity-30 transition-all hover:bg-gray-300 dark:hover:bg-gray-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Chain Content -->
+                <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50 dark:bg-gray-900">
+                    <div v-if="currentChain" v-for="(step, idx) in currentChain.steps" :key="idx"
+                        class="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-lg border-l-4 transition-all animate-slide-in"
+                        :style="{ borderColor: getPlayerColor(step.author), animationDelay: (idx * 0.15) + 's' }">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg"
+                                :style="{backgroundColor: getPlayerColor(step.author)}">
+                                {{ step.author[0] }}
+                            </div>
+                            <div>
+                                <span class="font-bold text-lg" :style="{color: getPlayerColor(step.author)}">{{ step.author }}</span>
+                                <span class="text-gray-400 text-sm ml-2">
+                                    {{ idx === 0 ? '✍️ ' + t('originalPhrase') : step.type === 'drawing' ? '🎨 ' + t('drewAs') : '💭 ' + t('guessedAs') }}
+                                </span>
+                            </div>
+                        </div>
+                        <div v-if="step.type === 'text'" class="text-2xl font-black text-center py-6 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-800 rounded-xl">
+                            "{{ step.content }}"
+                        </div>
+                        <div v-else class="bg-white rounded-xl overflow-hidden">
+                            <canvas :ref="'chainCanvas_' + idx" class="w-full" style="aspect-ratio: 4/3;"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-center gap-4">
+                    <button v-if="amIHost" @click="startGame"
+                        class="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-xl transition-all active:scale-95">
+                        {{ t('playAgain') }}
+                    </button>
+                    <button @click="handleLeaveRequest"
+                        class="px-8 py-4 text-gray-500 hover:text-red-500 font-bold transition-colors">
+                        {{ t('leaveRoom') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Overlay: Alligator Game Over (🏆 Trophy Overlay) -->
+        <div v-if="!isTelephoneGame && gameStateData.phase === 'GAME_OVER'"
             class="fixed inset-0 bg-gray-900/40 dark:bg-black/80 backdrop-blur-md flex flex-col items-center justify-center z-[60] text-center p-4">
             <h2
                 class="text-5xl font-black text-gray-900 dark:text-white mb-2 drop-shadow-lg uppercase tracking-tighter">
@@ -855,8 +1149,8 @@
             </div>
         </div>
 
-        <!-- Results Modal (Animated Bars for DRAWER_PREPARING) -->
-        <div v-if="gameStateData.phase === 'DRAWER_PREPARING'"
+        <!-- Results Modal (Animated Bars for DRAWER_PREPARING) - Alligator only -->
+        <div v-if="!isTelephoneGame && gameStateData.phase === 'DRAWER_PREPARING'"
             class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 dark:bg-black/80 backdrop-blur-md p-4">
             <div
                 class="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden transform transition-all">

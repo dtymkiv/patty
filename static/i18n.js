@@ -112,6 +112,36 @@ const translations = {
         // Random name generator
         adjectives: ['Happy', 'Silly', 'Brave', 'Clever', 'Swift', 'Mighty'],
         nouns: ['Panda', 'Tiger', 'Eagle', 'Fox', 'Wolf', 'Bear'],
+
+        // Game types
+        selectGame: 'Select Game',
+        alligator: 'Alligator',
+        alligatorDesc: 'Classic drawing game - guess what others draw!',
+        telephone: 'Telephone',
+        telephoneDesc: 'Write → Draw → Guess in a chain!',
+
+        // Telephone game
+        enterPhrase: 'Enter a phrase for others to draw',
+        phrasePlaceholder: 'Type something fun...',
+        submitPhrase: 'Submit',
+        waitingForPlayers: 'Waiting for other players...',
+        drawThis: 'Draw this:',
+        guessDrawing: 'What is this drawing?',
+        guessPlaceholder: 'Type your guess...',
+        submitGuess: 'Submit',
+        submittedCount: 'submitted',
+        chainResults: 'Chain Results',
+        nextChain: 'Next Chain',
+        allChainsComplete: 'All chains complete!',
+        originalPhrase: 'Original',
+        drewAs: 'drew it as',
+        guessedAs: 'guessed',
+        maxRounds: 'Max Rounds',
+        textDuration: 'Text Entry Time',
+        drawDuration: 'Drawing Time',
+        guessDuration: 'Guessing Time',
+        auto: 'Auto',
+        needMorePlayers: 'Need at least 3 players for Telephone',
     },
 
     uk: {
@@ -227,6 +257,36 @@ const translations = {
         // Random name generator
         adjectives: ['Веселий', 'Хитрий', 'Сміливий', 'Розумний', 'Швидкий', 'Могутній'],
         nouns: ['Панда', 'Тигр', 'Орел', 'Лис', 'Вовк', 'Ведмідь'],
+
+        // Game types
+        selectGame: 'Оберіть гру',
+        alligator: 'Крокодил',
+        alligatorDesc: 'Класична гра - вгадуй що малюють інші!',
+        telephone: 'Телефон',
+        telephoneDesc: 'Пиши → Малюй → Вгадуй по ланцюжку!',
+
+        // Telephone game
+        enterPhrase: 'Введіть фразу для малювання',
+        phrasePlaceholder: 'Щось цікаве...',
+        submitPhrase: 'Відправити',
+        waitingForPlayers: 'Чекаємо інших гравців...',
+        drawThis: 'Намалюй це:',
+        guessDrawing: 'Що на малюнку?',
+        guessPlaceholder: 'Ваша здогадка...',
+        submitGuess: 'Відправити',
+        submittedCount: 'відправили',
+        chainResults: 'Результати ланцюжка',
+        nextChain: 'Наступний ланцюжок',
+        allChainsComplete: 'Всі ланцюжки завершено!',
+        originalPhrase: 'Оригінал',
+        drewAs: 'намалював',
+        guessedAs: 'вгадав',
+        maxRounds: 'Макс. раундів',
+        textDuration: 'Час на текст',
+        drawDuration: 'Час на малюнок',
+        guessDuration: 'Час на відповідь',
+        auto: 'Авто',
+        needMorePlayers: 'Потрібно мінімум 3 гравці для Телефону',
     }
 };
 
