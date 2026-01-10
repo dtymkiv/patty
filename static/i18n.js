@@ -119,6 +119,8 @@ const translations = {
         alligatorDesc: 'Classic drawing game - guess what others draw!',
         telephone: 'Telephone',
         telephoneDesc: 'Write → Draw → Guess in a chain!',
+        createAlligatorGame: 'Create Alligator Game',
+        createTelephoneGame: 'Create Telephone Game',
 
         // Telephone game
         enterPhrase: 'Enter a phrase for others to draw',
@@ -260,10 +262,12 @@ const translations = {
 
         // Game types
         selectGame: 'Оберіть гру',
-        alligator: 'Крокодил',
+        alligator: 'Алігатор',
         alligatorDesc: 'Класична гра - вгадуй що малюють інші!',
         telephone: 'Телефон',
         telephoneDesc: 'Пиши → Малюй → Вгадуй по ланцюжку!',
+        createAlligatorGame: 'Створити гру Алігатор',
+        createTelephoneGame: 'Створити гру Телефон',
 
         // Telephone game
         enterPhrase: 'Введіть фразу для малювання',

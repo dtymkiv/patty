@@ -13,7 +13,6 @@ createApp({
             rooms: [],
             newRoomPassword: '',
             joinCodeInput: '',
-            selectedGameType: 'alligator', // 'alligator' or 'telephone'
             currentGameType: 'alligator', // Active game type in room
 
             // Room / Game
@@ -514,7 +513,8 @@ createApp({
             this.isEditingNickname = false;
             this.nicknameInput = '';
         },
-        async createRoom() {
+        async createRoom(gameType = 'alligator') {
+            this.currentGameType = gameType;
             // Ensure any existing connection is closed first
             if (this.socket) {
                 this.socket.onclose = null;
@@ -1301,7 +1301,8 @@ createApp({
                 this.hostLogicInitialized = true;
             }
             // If game is over, reset to lobby first (preserves config and players)
-            if (this.gameStateData.phase === 'GAME_OVER') {
+            const isPostGamePhase = ['GAME_OVER', 'RESULTS'].includes(this.gameStateData.phase);
+            if (isPostGamePhase) {
                 // Check if resetToLobby method exists (for backwards compatibility)
                 if (typeof this.hostLogic.resetToLobby === 'function') {
                     this.hostLogic.resetToLobby();

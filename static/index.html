@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Party Games Service</title>
+    <title>Patty - Games that just work</title>
+    <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+    <link rel="shortcut icon" href="/static/favicon.ico" type="image/x-icon">
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/unique-names-generator@4.7.1/dist/index.umd.min.js"></script>
@@ -370,7 +372,7 @@
                     class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-bold py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95">{{ t('enterLobby') }}</button>
             </div><!-- -->
             <div v-else-if="view === 'lobby'"
-                class="w-full max-w-4xl px-4 sm:px-4 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8 mx-auto shrink-0 pb-8">
+                class="w-full max-w-4xl px-4 sm:px-4 mx-auto shrink-0 pb-8 flex flex-col gap-6 transition-all duration-300">
 
                 <!-- Join Room by Code -->
                 <div
@@ -387,18 +389,34 @@
                     </div>
                 </div>
 
-                <!-- Create Room -->
-                <div
-                    class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300 text-center flex flex-col items-center justify-center">
-                    <h2 class="text-2xl font-black text-gray-900 dark:text-gray-100 mb-2">{{ t('hostGame') }}</h2>
-                    <p class="text-gray-500 dark:text-gray-400 mb-8 font-medium italic">
+                <div class="space-y-3 text-center">
+                    <h2 class="text-xl font-black uppercase tracking-wider text-gray-900 dark:text-white">{{ t('hostGame') }}</h2>
+                    <p class="text-sm text-gray-500 dark:text-gray-400 font-medium italic">
                         {{ t('hostDescription') }}
                     </p>
+                </div>
 
-                    <button @click="createRoom"
-                        class="w-full bg-green-500 hover:bg-green-600 text-white font-black py-4 rounded-xl transition-all shadow-lg hover:shadow-green-500/20 active:scale-95 uppercase tracking-widest text-sm">
-                        {{ t('createNewGame') }}
-                    </button>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div
+                        class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300 flex flex-col items-center text-center gap-4">
+                        <div class="text-5xl">🐊</div>
+                        <div class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-widest">{{ t('alligator') }}</div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('alligatorDesc') }}</p>
+                        <button @click="createRoom('alligator')"
+                            class="w-full bg-[#ea5128] hover:bg-[#c1381b] text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-[#ea512833] active:scale-95 uppercase tracking-widest text-sm">
+                            {{ t('createAlligatorGame') }}
+                        </button>
+                    </div>
+                    <div
+                        class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-colors duration-300 flex flex-col items-center text-center gap-4">
+                        <div class="text-5xl">📞</div>
+                        <div class="text-xl font-black text-gray-900 dark:text-white uppercase tracking-widest">{{ t('telephone') }}</div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">{{ t('telephoneDesc') }}</p>
+                        <button @click="createRoom('telephone')"
+                            class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95 uppercase tracking-widest text-sm">
+                            {{ t('createTelephoneGame') }}
+                        </button>
+                    </div>
                 </div>
             </div><!-- -->
             <div v-else-if="view === 'room'"
@@ -455,27 +473,6 @@
                                 {{ t('settings') }}</h3>
 
                             <div class="space-y-8">
-                                <!-- Game Type Selection -->
-                                <div>
-                                    <label class="block text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest mb-3">{{ t('selectGame') }}</label>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        <button @click="setGameType('alligator')" :disabled="!amIHost"
-                                            :class="currentGameType === 'alligator' ? 'ring-4 ring-[#ea5128] bg-white dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'"
-                                            class="p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-600 transition-all hover:border-[#ea5128]/50 text-center">
-                                            <div class="text-4xl mb-2">🐊</div>
-                                            <div class="font-black text-gray-900 dark:text-white">{{ t('alligator') }}</div>
-                                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('alligatorDesc') }}</div>
-                                        </button>
-                                        <button @click="setGameType('telephone')" :disabled="!amIHost"
-                                            :class="currentGameType === 'telephone' ? 'ring-4 ring-[#ea5128] bg-white dark:bg-gray-700' : 'bg-gray-50 dark:bg-gray-800'"
-                                            class="p-4 rounded-2xl border-2 border-gray-200 dark:border-gray-600 transition-all hover:border-[#ea5128]/50 text-center">
-                                            <div class="text-4xl mb-2">📞</div>
-                                            <div class="font-black text-gray-900 dark:text-white">{{ t('telephone') }}</div>
-                                            <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ t('telephoneDesc') }}</div>
-                                        </button>
-                                    </div>
-                                </div>
-
                                 <!-- Host Role -->
                                 <div>
                                     <label
@@ -605,7 +602,7 @@
                                             <label class="text-gray-600 dark:text-gray-400 font-bold uppercase text-xs tracking-widest">{{ t('maxRounds') }}</label>
                                             <span class="text-[#ea5128] font-black">{{ telephoneConfig.max_rounds === 0 ? t('auto') : telephoneConfig.max_rounds }}</span>
                                         </div>
-                                        <input type="range" min="0" :max="Math.max(players.length, 6)" step="1" v-model.number="telephoneConfig.max_rounds" @input="updateTelephoneConfig" :disabled="!amIHost"
+                                        <input type="range" min="0" :max="Math.max(players.length, 1)" step="1" v-model.number="telephoneConfig.max_rounds" @input="updateTelephoneConfig" :disabled="!amIHost"
                                             class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-[#ea5128]">
                                     </div>
                                 </template>

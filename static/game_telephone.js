@@ -24,7 +24,7 @@ class TelephoneHost {
         this.config = {
             draw_duration: 90,
             guess_duration: 45,
-            max_rounds: 0, // 0 = auto (player count), otherwise 2 to player count
+            max_rounds: 0, // 0 = auto, otherwise specifies number of drawing rounds (capped at playerCount)
             host_role: "player",
         };
 
@@ -105,10 +105,15 @@ class TelephoneHost {
             return;
         }
 
-        // Determine max rounds
-        this.state.maxRounds = this.config.max_rounds > 0 
+        // config.max_rounds represents number of DRAWING rounds
+        // Determine actual drawing rounds (0 = auto, capped at playerCount)
+        const drawingRounds = this.config.max_rounds > 0 
             ? Math.min(this.config.max_rounds, activePlayers.length)
             : activePlayers.length;
+        
+        // Convert drawing rounds to total steps: (drawingRounds * 2) - 1
+        // Example: 2 drawing rounds = init -> draw1 -> guess1 -> draw2 = 3 steps
+        this.state.maxRounds = (drawingRounds * 2) - 1;
 
         // Initialize chains - each player starts their own chain
         this.state.chains = {};
